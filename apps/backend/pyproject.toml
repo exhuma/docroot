@@ -1,0 +1,8 @@
+[project]
+name = "docroot-backend"
+version = "0.1.0"
+description = "Scaffold-only backend package for the documentation host"
+requires-python = ">=3.12"
+
+[tool.scaffold]
+status = "placeholder-only"

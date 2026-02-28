@@ -1,0 +1,17 @@
+{
+  "name": "docroot-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "npm --prefix apps/frontend run dev",
+    "build": "npm --prefix apps/frontend run build",
+    "preview": "npm --prefix apps/frontend run preview",
+    "type-check": "npm --prefix apps/frontend run type-check",
+    "lint": "npm --prefix apps/frontend run lint",
+    "lint:fix": "npm --prefix apps/frontend run lint:fix",
+    "frontend:install": "npm --prefix apps/frontend ci",
+    "backend:ci": "bash scripts/ci/backend-placeholder.sh",
+    "nginx:ci": "bash scripts/ci/nginx-placeholder.sh",
+    "ci": "npm run frontend:install && npm run lint && npm run type-check && npm run build && npm run backend:ci && npm run nginx:ci"
+  }
+}

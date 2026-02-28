@@ -1,0 +1,19 @@
+name: Backend Future Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'apps/backend/**'
+      - '.github/workflows/backend-future.yml'
+
+jobs:
+  placeholder:
+    name: Reserved backend pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder
+        run: |
+          echo "Backend pipeline is scaffolded only."
+          echo "Add lint/type-check/tests and image build when backend implementation starts."

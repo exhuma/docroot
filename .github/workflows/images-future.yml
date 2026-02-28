@@ -1,0 +1,21 @@
+name: Images Future Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'apps/nginx/**'
+      - 'apps/backend/**'
+      - 'deploy/compose/**'
+      - '.github/workflows/images-future.yml'
+
+jobs:
+  placeholder:
+    name: Reserved image pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder
+        run: |
+          echo "Image build pipeline is scaffolded only."
+          echo "Add separate backend/nginx image builds in implementation phase."

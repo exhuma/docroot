@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  api:
+    image: python:3.12-slim
+    command: ["sh", "-c", "echo 'api scaffold only'; sleep infinity"]
+    volumes:
+      - data:/data
+
+  nginx:
+    build:
+      context: ../../apps/nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    volumes:
+      - data:/data
+
+volumes:
+  data:
+    name: docroot_data

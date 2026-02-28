@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+
+jobs:
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: apps/frontend
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: apps/frontend
+      - name: Type-check frontend
+        run: npm run type-check
+        working-directory: apps/frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: apps/frontend
+
+  backend-placeholder:
+    name: Backend scaffold check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run backend placeholder check
+        run: bash scripts/ci/backend-placeholder.sh
+
+  nginx-placeholder:
+    name: nginx scaffold check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run nginx placeholder check
+        run: bash scripts/ci/nginx-placeholder.sh
