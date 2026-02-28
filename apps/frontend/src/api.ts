@@ -37,6 +37,16 @@ async function handleResponse (res: Response): Promise<unknown> {
   return res.json()
 }
 
+function nsBase (ns: string): string {
+  return `${BASE}/namespaces/${encodeURIComponent(ns)}`
+}
+
+function projBase (ns: string, proj: string): string {
+  return (
+    `${nsBase(ns)}/projects/${encodeURIComponent(proj)}`
+  )
+}
+
 export const api = {
   async listNamespaces (): Promise<Namespace[]> {
     const res = await fetch(`${BASE}/namespaces`)
@@ -73,9 +83,7 @@ export const api = {
   },
 
   async listProjects (ns: string): Promise<Project[]> {
-    const res = await fetch(
-      `${BASE}/${encodeURIComponent(ns)}/projects`,
-    )
+    const res = await fetch(`${nsBase(ns)}/projects`)
     return handleResponse(res) as Promise<Project[]>
   },
 
@@ -84,17 +92,14 @@ export const api = {
     name: string,
     token: string,
   ): Promise<void> {
-    const res = await fetch(
-      `${BASE}/${encodeURIComponent(ns)}/projects`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ name }),
+    const res = await fetch(`${nsBase(ns)}/projects`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-    )
+      body: JSON.stringify({ name }),
+    })
     await handleResponse(res)
   },
 
@@ -104,8 +109,7 @@ export const api = {
     token: string,
   ): Promise<void> {
     const res = await fetch(
-      `${BASE}/${encodeURIComponent(ns)}/projects/`
-      + `${encodeURIComponent(name)}`,
+      `${nsBase(ns)}/projects/${encodeURIComponent(name)}`,
       {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
@@ -118,10 +122,7 @@ export const api = {
     ns: string,
     proj: string,
   ): Promise<VersionInfo[]> {
-    const res = await fetch(
-      `${BASE}/${encodeURIComponent(ns)}/`
-      + `${encodeURIComponent(proj)}/versions`,
-    )
+    const res = await fetch(`${projBase(ns, proj)}/versions`)
     return handleResponse(res) as Promise<VersionInfo[]>
   },
 
@@ -132,8 +133,7 @@ export const api = {
     locale: string,
   ): Promise<ResolveResult> {
     const res = await fetch(
-      `${BASE}/${encodeURIComponent(ns)}/`
-      + `${encodeURIComponent(proj)}/resolve/`
+      `${projBase(ns, proj)}/resolve/`
       + `${encodeURIComponent(version)}/`
       + `${encodeURIComponent(locale)}`,
     )
@@ -146,15 +146,11 @@ export const api = {
     form: FormData,
     token: string,
   ): Promise<void> {
-    const res = await fetch(
-      `${BASE}/${encodeURIComponent(ns)}/`
-      + `${encodeURIComponent(proj)}/upload`,
-      {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      },
-    )
+    const res = await fetch(`${projBase(ns, proj)}/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
     await handleResponse(res)
   },
 
@@ -165,15 +161,11 @@ export const api = {
     token: string,
   ): Promise<void> {
     const res = await fetch(
-      `${BASE}/${encodeURIComponent(ns)}/`
-      + `${encodeURIComponent(proj)}/latest`,
+      `${projBase(ns, proj)}/versions/`
+      + `${encodeURIComponent(version)}/latest`,
       {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ version }),
+        headers: { Authorization: `Bearer ${token}` },
       },
     )
     await handleResponse(res)

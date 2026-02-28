@@ -2,20 +2,29 @@ version: "3.9"
 
 services:
   api:
-    image: python:3.12-slim
-    command: ["sh", "-c", "echo 'api scaffold only'; sleep infinity"]
+    build:
+      context: ../../apps/backend
+    environment:
+      - DATA_ROOT=/data
+      - OAUTH_JWKS_URL=${OAUTH_JWKS_URL}
+      - OAUTH_AUDIENCE=${OAUTH_AUDIENCE}
+      - OAUTH_ROLE_EXTRACTOR=${OAUTH_ROLE_EXTRACTOR:-keycloak}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
     volumes:
       - data:/data
+    restart: unless-stopped
 
   nginx:
     build:
-      context: ../../apps/nginx
+      context: ../../apps
+      dockerfile: nginx/Dockerfile
     ports:
       - "80:80"
     depends_on:
       - api
     volumes:
       - data:/data
+    restart: unless-stopped
 
 volumes:
   data:
