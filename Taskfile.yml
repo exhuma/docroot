@@ -22,13 +22,13 @@ tasks:
     dotenv:
       - '../../{{.DEV_ENV}}'
     cmds:
-      - uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+      - uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
   dev:frontend:
     desc: Start the Vite frontend dev server (proxies /api to :8000)
     dir: apps/frontend
     cmds:
-      - npm run dev
+      - npm run dev -- --host
 
   dev:
     desc: Start API and frontend dev servers in parallel
@@ -47,7 +47,7 @@ tasks:
         task gen-token -- --sub alice --roles editor,viewer
     dir: '.'
     cmds:
-      - python3 scripts/gen_dev_token.py {{.CLI_ARGS}}
+      - uv run --project apps/backend scripts/gen_dev_token.py {{.CLI_ARGS}}
 
   # ----------------------------------------------------------------
   # Build
@@ -78,7 +78,7 @@ tasks:
     desc: Install backend Python dependencies
     dir: apps/backend
     cmds:
-      - pip install -e ".[dev]"
+      - uv sync --extra dev
 
   install:
     desc: Install all dependencies
@@ -125,7 +125,7 @@ tasks:
     desc: Run backend tests
     dir: apps/backend
     cmds:
-      - python -m pytest
+      - uv run pytest
 
   test:
     desc: Run all tests

@@ -22,8 +22,9 @@ try:
     from jose import jwt
 except ImportError:
     print(
-        "Missing dependencies. Install with:\n"
-        "  pip install python-jose[cryptography]",
+        "Missing dependencies. Run:\n"
+        "  uv sync\n"
+        "from the apps/backend directory.",
         file=sys.stderr,
     )
     sys.exit(1)
