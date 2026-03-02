@@ -145,3 +145,7 @@ vite.config.ts.timestamp-*
 __pycache__/
 *.pyc
 *.egg-info/
+
+# Local development data and environment
+deploy/dev/data/
+deploy/dev/.env

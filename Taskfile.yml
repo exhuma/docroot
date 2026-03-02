@@ -1,0 +1,141 @@
+# https://taskfile.dev
+version: '3'
+
+vars:
+  DEV_ENV: deploy/dev/.env
+  DEV_DATA: deploy/dev/data
+
+tasks:
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  # ----------------------------------------------------------------
+  # Development servers
+  # ----------------------------------------------------------------
+
+  dev:api:
+    desc: Start the FastAPI backend in development mode
+    dir: apps/backend
+    dotenv:
+      - '../../{{.DEV_ENV}}'
+    cmds:
+      - uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  dev:frontend:
+    desc: Start the Vite frontend dev server (proxies /api to :8000)
+    dir: apps/frontend
+    cmds:
+      - npm run dev
+
+  dev:
+    desc: Start API and frontend dev servers in parallel
+    deps:
+      - dev:api
+      - dev:frontend
+
+  # ----------------------------------------------------------------
+  # Development auth
+  # ----------------------------------------------------------------
+
+  gen-token:
+    desc: >
+      Generate a dev JWT token.
+      Override subject/roles/audience with CLI vars:
+        task gen-token -- --sub alice --roles editor,viewer
+    dir: '.'
+    cmds:
+      - python3 scripts/gen_dev_token.py {{.CLI_ARGS}}
+
+  # ----------------------------------------------------------------
+  # Build
+  # ----------------------------------------------------------------
+
+  build:frontend:
+    desc: Build the Vue frontend for production
+    dir: apps/frontend
+    cmds:
+      - npm run build-only
+
+  build:
+    desc: Build all production artefacts
+    deps:
+      - build:frontend
+
+  # ----------------------------------------------------------------
+  # Install / setup
+  # ----------------------------------------------------------------
+
+  install:frontend:
+    desc: Install frontend npm dependencies
+    dir: apps/frontend
+    cmds:
+      - npm ci
+
+  install:backend:
+    desc: Install backend Python dependencies
+    dir: apps/backend
+    cmds:
+      - pip install -e ".[dev]"
+
+  install:
+    desc: Install all dependencies
+    deps:
+      - install:frontend
+      - install:backend
+
+  setup:dev:
+    desc: >
+      Create the local dev .env file from the example
+      (skips if it already exists)
+    cmds:
+      - |
+        if [ ! -f {{.DEV_ENV}} ]; then
+          cp deploy/dev/.env.example {{.DEV_ENV}}
+          echo "Created {{.DEV_ENV}} — edit it if needed."
+        else
+          echo "{{.DEV_ENV}} already exists, skipping."
+        fi
+
+  # ----------------------------------------------------------------
+  # Quality gates
+  # ----------------------------------------------------------------
+
+  lint:
+    desc: Lint the frontend
+    dir: apps/frontend
+    cmds:
+      - npm run lint
+
+  lint:fix:
+    desc: Auto-fix frontend lint issues
+    dir: apps/frontend
+    cmds:
+      - npm run lint:fix
+
+  type-check:
+    desc: Run frontend TypeScript type-check
+    dir: apps/frontend
+    cmds:
+      - npm run type-check
+
+  test:backend:
+    desc: Run backend tests
+    dir: apps/backend
+    cmds:
+      - python -m pytest
+
+  test:
+    desc: Run all tests
+    deps:
+      - test:backend
+
+  ci:
+    desc: Full CI pipeline (lint + type-check + build + test)
+    cmds:
+      - task: lint
+      - task: type-check
+      - task: build:frontend
+      - task: test:backend

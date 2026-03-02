@@ -1,3 +1,4 @@
+import json
 import os
 from dataclasses import dataclass, field
 
@@ -24,6 +25,11 @@ class AuthContext:
 def _get_jwks() -> dict:
     global _jwks_cache
     if _jwks_cache is not None:
+        return _jwks_cache
+    if JWKS_URL.startswith("file://"):
+        path = JWKS_URL[len("file://"):]
+        with open(path) as fh:
+            _jwks_cache = json.load(fh)
         return _jwks_cache
     response = httpx.get(JWKS_URL, timeout=10)
     response.raise_for_status()
