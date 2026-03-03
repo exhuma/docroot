@@ -6,12 +6,6 @@ vars:
   DEV_DATA: deploy/dev/data
 
 tasks:
-  default:
-    desc: List all available tasks
-    cmds:
-      - task --list
-    silent: true
-
   # ----------------------------------------------------------------
   # Development servers
   # ----------------------------------------------------------------
@@ -28,7 +22,7 @@ tasks:
     desc: Start the Vite frontend dev server (proxies /api to :8000)
     dir: apps/frontend
     cmds:
-      - npm run dev -- --host
+      - npm run dev -- --host 0.0.0.0
 
   dev:
     desc: Start API and frontend dev servers in parallel
@@ -90,14 +84,11 @@ tasks:
     desc: >
       Create the local dev .env file from the example
       (skips if it already exists)
+    status:
+      - test -f {{.DEV_ENV}}
     cmds:
-      - |
-        if [ ! -f {{.DEV_ENV}} ]; then
-          cp deploy/dev/.env.example {{.DEV_ENV}}
-          echo "Created {{.DEV_ENV}} — edit it if needed."
-        else
-          echo "{{.DEV_ENV}} already exists, skipping."
-        fi
+      - cp deploy/dev/.env.example {{.DEV_ENV}}
+      - echo "Created {{.DEV_ENV}} — edit it if needed."
 
   # ----------------------------------------------------------------
   # Quality gates
