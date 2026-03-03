@@ -4,6 +4,8 @@
     <v-toolbar-title>
       {{ namespace }} — {{ t('projects') }}
     </v-toolbar-title>
+    <v-spacer />
+    <TokenDialog />
   </v-app-bar>
 
   <v-container>
@@ -71,6 +73,7 @@
   import { useRoute } from 'vue-router'
   import { api, type Project } from '@/api'
   import { isAuthenticated, token } from '@/auth'
+  import TokenDialog from '@/components/TokenDialog.vue'
 
   const { t } = useI18n()
   const route = useRoute()

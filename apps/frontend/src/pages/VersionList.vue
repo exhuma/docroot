@@ -12,6 +12,7 @@
     >
       {{ t('upload') }}
     </v-btn>
+    <TokenDialog />
   </v-app-bar>
 
   <v-container>
@@ -99,6 +100,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { api, type VersionInfo } from '@/api'
   import { isAuthenticated, token } from '@/auth'
+  import TokenDialog from '@/components/TokenDialog.vue'
   import UploadDialog from '@/components/UploadDialog.vue'
 
   const { t } = useI18n()
