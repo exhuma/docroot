@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Generate a development JWT for local testing.
 
-Usage:
+Usage::
+
     python scripts/gen_dev_token.py [--sub NAME] [--roles ROLE,...]
+        [--client CLIENT] [--client-roles ROLE,...]
         [--days N] [--audience AUD]
 
 The token is signed with the dev RSA private key at
-deploy/dev/dev_key.pem and can be verified by the backend when
-OAUTH_JWKS_URL points to deploy/dev/jwks.json.
+``deploy/dev/dev_key.pem`` and can be verified by the backend when
+``DOCROOT_OAUTH_JWKS_URL`` points to ``deploy/dev/jwks.json``.
 """
 import argparse
 import sys
@@ -17,9 +19,10 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 
 try:
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives import serialization
-    from jose import jwt
+    import jwt
+    from cryptography.hazmat.primitives.serialization import (
+        load_pem_private_key,
+    )
 except ImportError:
     print(
         "Missing dependencies. Run:\n"
@@ -31,6 +34,7 @@ except ImportError:
 
 
 def main() -> None:
+    """Entry point: parse arguments and print the generated JWT."""
     parser = argparse.ArgumentParser(
         description="Generate a dev JWT token"
     )
@@ -46,6 +50,17 @@ def main() -> None:
             "Comma-separated Keycloak realm roles. "
             "Default: editor"
         ),
+    )
+    parser.add_argument(
+        "--client",
+        default="",
+        help="Client ID for client-level roles.",
+    )
+    parser.add_argument(
+        "--client-roles",
+        default="",
+        dest="client_roles",
+        help="Comma-separated client-level roles.",
     )
     parser.add_argument(
         "--days",
@@ -68,16 +83,17 @@ def main() -> None:
         )
         sys.exit(1)
 
-    with open(key_path, "rb") as fh:
-        private_key = serialization.load_pem_private_key(
-            fh.read(),
-            password=None,
-            backend=default_backend(),
-        )
+    private_key = load_pem_private_key(
+        key_path.read_bytes(), password=None
+    )
 
     now = datetime.now(timezone.utc)
-    roles = [r.strip() for r in args.roles.split(",") if r.strip()]
-    payload = {
+    roles = [
+        r.strip()
+        for r in args.roles.split(",")
+        if r.strip()
+    ]
+    payload: dict[str, object] = {
         "sub": args.sub,
         "iss": "docroot-dev",
         "aud": args.audience,
@@ -87,6 +103,16 @@ def main() -> None:
         ),
         "realm_access": {"roles": roles},
     }
+
+    if args.client and args.client_roles:
+        client_roles = [
+            r.strip()
+            for r in args.client_roles.split(",")
+            if r.strip()
+        ]
+        payload["resource_access"] = {
+            args.client: {"roles": client_roles}
+        }
 
     token = jwt.encode(
         payload,

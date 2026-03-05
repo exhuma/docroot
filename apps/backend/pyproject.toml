@@ -6,13 +6,14 @@ build-backend = "hatchling.build"
 name = "docroot-backend"
 version = "0.1.0"
 description = "FastAPI backend for the documentation host"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "python-multipart>=0.0.12",
-    "toml>=0.10",
-    "python-jose[cryptography]>=3.3",
+    "pyjwt[cryptography]>=2.8",
+    "pydantic-settings>=2.0",
+    "packaging>=24",
     "httpx>=0.27",
 ]
 

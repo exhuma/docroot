@@ -1,9 +1,9 @@
-import shutil
-import stat
-import tempfile
-import zipfile
-from datetime import datetime, timezone
-from pathlib import Path
+"""Version and locale management routes.
+
+Handles version listing (with optional sorting by namespace
+versioning config), documentation uploads, and version/locale
+resolution with fallback logic.
+"""
 from typing import Annotated
 
 from fastapi import (
@@ -17,67 +17,27 @@ from fastapi import (
 
 from app.acl import AclCache
 from app.auth import AuthContext, get_optional_auth
-from app.models import ResolveOut, VersionOut
-from app.resolver import resolve_version
+from app.dependencies import (
+    get_acl,
+    get_storage,
+    require_read,
+    require_write,
+)
+from app.schemas import ResolveOut, VersionOut
+from app.services.upload import install_upload
 from app.storage import (
     FilesystemStorage,
     LocaleNotFound,
-    VersionConflict,
     VersionNotFound,
 )
-from app.validators import (
-    validate_locale,
-    validate_namespace,
-    validate_project,
-    validate_version,
-)
-from app.zipvalidator import validate_zip
+from app.version_sorter import sort_versions
 
 router = APIRouter(tags=["versions"])
 
-_storage = FilesystemStorage()
-_acl = AclCache()
-
-
-def _require_read(
-    namespace: str,
-    auth: AuthContext | None,
-) -> None:
-    ns_dir = _storage.namespace_dir(namespace)
-    acl = _acl.get(ns_dir)
-    roles = auth.roles if auth else []
-    if not _acl.can_read(acl, roles):
-        if auth is None:
-            raise HTTPException(
-                status_code=401,
-                detail="Authentication required",
-            )
-        raise HTTPException(
-            status_code=403,
-            detail="Read permission denied",
-        )
-
-
-def _require_write(
-    namespace: str,
-    auth: AuthContext | None,
-) -> None:
-    if auth is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required",
-        )
-    ns_dir = _storage.namespace_dir(namespace)
-    acl = _acl.get(ns_dir)
-    if not _acl.can_write(acl, auth.roles):
-        raise HTTPException(
-            status_code=403,
-            detail="Write permission denied",
-        )
-
 
 @router.get(
-    "/api/namespaces/{namespace}/projects/{project}/versions",
+    "/api/namespaces/{namespace}/projects/{project}"
+    "/versions",
     response_model=list[VersionOut],
 )
 async def list_versions(
@@ -86,23 +46,46 @@ async def list_versions(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> list[VersionOut]:
-    validate_namespace(namespace)
-    validate_project(project)
-    if not _storage.namespace_exists(namespace):
+    """List all versions of a project.
+
+    Versions are sorted according to the namespace versioning
+    scheme (``semver``, ``calver``, ``pep440``, custom regex,
+    or default lexicographic order).
+
+    Requires read access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name.
+    :param project: Project name.
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :returns: List of version objects ordered by versioning
+        scheme.
+    :raises 404: If the namespace or project does not exist.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    if not _storage.project_exists(namespace, project):
+    if not storage.project_exists(namespace, project):
         raise HTTPException(
             status_code=404, detail="Project not found"
         )
-    _require_read(namespace, auth)
-    versions = _storage.list_versions(namespace, project)
-    current_latest = _storage.get_latest(namespace, project)
-    result = []
+    require_read(namespace, storage, acl, auth)
+    versions = storage.list_versions(namespace, project)
+    ns_meta = storage.get_namespace_meta(namespace)
+    versioning = str(ns_meta.get("versioning", ""))
+    if versioning:
+        versions = sort_versions(versions, versioning)
+    current_latest = storage.get_latest(namespace, project)
+    result: list[VersionOut] = []
     for v in versions:
-        locales = _storage.list_locales(namespace, project, v)
+        locales = storage.list_locales(namespace, project, v)
         result.append(
             VersionOut(
                 name=v,
@@ -125,19 +108,35 @@ async def list_locales(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> list[str]:
-    validate_namespace(namespace)
-    validate_project(project)
-    if not _storage.namespace_exists(namespace):
+    """List available locales for a specific version.
+
+    Requires read access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name.
+    :param project: Project name.
+    :param version: Version string.
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :returns: Sorted list of locale codes.
+    :raises 404: If the namespace does not exist.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    _require_read(namespace, auth)
-    return _storage.list_locales(namespace, project, version)
+    require_read(namespace, storage, acl, auth)
+    return storage.list_locales(namespace, project, version)
 
 
 @router.post(
-    "/api/namespaces/{namespace}/projects/{project}/upload",
+    "/api/namespaces/{namespace}/projects/{project}"
+    "/upload",
     status_code=201,
 )
 async def upload_version(
@@ -156,79 +155,60 @@ async def upload_version(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
-) -> dict:
-    validate_namespace(namespace)
-    validate_project(project)
-    validate_version(version)
-    validate_locale(locale)
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
+) -> dict[str, str]:
+    """Upload a documentation ZIP for a specific version+locale.
 
-    if not _storage.namespace_exists(namespace):
+    The ZIP must contain a top-level ``index.html``. The
+    ``metadata.toml`` file in the archive (if present) is
+    discarded; the server generates it from the supplied form
+    fields.
+
+    Requires write access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name.
+    :param project: Project name.
+    :param file: ZIP archive (multipart field ``file``).
+    :param version: Target version string (form field).
+    :param locale: Two-letter locale code (form field).
+    :param latest: Set as latest after upload (form field).
+    :param uploader_subject: Override uploader identity.
+    :param upload_timestamp: ISO 8601 timestamp (form field).
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :returns: ``{"status": "created"}``.
+    :raises 404: If the namespace or project does not exist.
+    :raises 422: If the ZIP fails validation.
+    :raises 409: If the version+locale already exists.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    if not _storage.project_exists(namespace, project):
+    if not storage.project_exists(namespace, project):
         raise HTTPException(
             status_code=404, detail="Project not found"
         )
+    require_write(namespace, storage, acl, auth)
 
-    _require_write(namespace, auth)
-
-    if upload_timestamp is None:
-        upload_timestamp = (
-            datetime.now(timezone.utc).isoformat()
-        )
-    if uploader_subject is None and auth is not None:
-        uploader_subject = auth.subject
-    uploader_subject = uploader_subject or ""
-
-    # Create temp dir on the same filesystem as data root so
-    # that atomic rename in storage works without a copy.
-    uploads_tmp = _storage.data_root / ".uploads"
-    uploads_tmp.mkdir(parents=True, exist_ok=True)
-    tmpdir = Path(tempfile.mkdtemp(dir=uploads_tmp))
-    try:
-        zip_path = tmpdir / "upload.zip"
-        zip_path.write_bytes(await file.read())
-
-        try:
-            validate_zip(zip_path)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=422, detail=str(exc)
-            ) from exc
-
-        extract_dir = tmpdir / "content"
-        extract_dir.mkdir()
-        with zipfile.ZipFile(zip_path) as zf:
-            for member in zf.infolist():
-                # Server generates metadata.toml; ignore upload.
-                if member.filename == "metadata.toml":
-                    continue
-                # Skip any symlink entries (defense-in-depth).
-                unix_mode = member.external_attr >> 16
-                if stat.S_ISLNK(unix_mode):
-                    continue
-                zf.extract(member, extract_dir)
-
-        try:
-            _storage.create_version(
-                namespace,
-                project,
-                version,
-                locale,
-                extract_dir,
-                latest,
-                uploader_subject,
-                upload_timestamp,
-            )
-        except VersionConflict:
-            raise HTTPException(
-                status_code=409,
-                detail="Version+locale already exists",
-            )
-    finally:
-        shutil.rmtree(tmpdir, ignore_errors=True)
-
+    subject = uploader_subject or (
+        auth.subject if auth else ""
+    )
+    await install_upload(
+        file=file,
+        namespace=namespace,
+        project=project,
+        version=version,
+        locale=locale,
+        latest=latest,
+        uploader_subject=subject,
+        upload_timestamp=upload_timestamp,
+        storage=storage,
+    )
     return {"status": "created"}
 
 
@@ -245,18 +225,37 @@ async def delete_version(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> None:
-    validate_namespace(namespace)
-    validate_project(project)
-    validate_version(version)
-    validate_locale(locale)
-    if not _storage.namespace_exists(namespace):
+    """Delete a specific version+locale artifact.
+
+    If the deleted version was the latest, the latest symlink is
+    updated to the most recently uploaded remaining version.
+
+    Requires write access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name.
+    :param project: Project name.
+    :param version: Version string.
+    :param locale: Locale code.
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :raises 404: If the namespace or version+locale does not
+        exist.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    _require_write(namespace, auth)
+    require_write(namespace, storage, acl, auth)
     try:
-        _storage.delete_version(namespace, project, version, locale)
+        storage.delete_version(
+            namespace, project, version, locale
+        )
     except VersionNotFound:
         raise HTTPException(
             status_code=404,
@@ -276,25 +275,41 @@ async def set_latest(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> None:
-    validate_namespace(namespace)
-    validate_project(project)
-    validate_version(version)
-    if not _storage.namespace_exists(namespace):
+    """Mark a version as the latest.
+
+    Atomically updates the ``latest`` symlink for the project.
+
+    Requires write access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name.
+    :param project: Project name.
+    :param version: Version string to mark as latest.
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :raises 404: If the namespace, project, or version is not
+        found.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    if not _storage.project_exists(namespace, project):
+    if not storage.project_exists(namespace, project):
         raise HTTPException(
             status_code=404, detail="Project not found"
         )
-    _require_write(namespace, auth)
-    versions = _storage.list_versions(namespace, project)
+    require_write(namespace, storage, acl, auth)
+    versions = storage.list_versions(namespace, project)
     if version not in versions:
         raise HTTPException(
             status_code=404, detail="Version not found"
         )
-    _storage.set_latest(namespace, project, version)
+    storage.set_latest(namespace, project, version)
 
 
 @router.get(
@@ -310,18 +325,40 @@ async def resolve_endpoint(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> ResolveOut:
-    validate_namespace(namespace)
-    validate_project(project)
-    validate_locale(locale)
-    if not _storage.namespace_exists(namespace):
+    """Resolve a version alias and locale with fallback logic.
+
+    Returns the concrete version and locale that will be served.
+    When a locale fallback is applied, ``fallback_used`` is
+    ``true``.
+
+    Requires read access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name.
+    :param project: Project name.
+    :param version: Version string or ``"latest"``.
+    :param locale: Requested locale code.
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :returns: Resolved version and locale information.
+    :raises 404: If the namespace, version, or locale cannot be
+        resolved.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    _require_read(namespace, auth)
+    require_read(namespace, storage, acl, auth)
     try:
-        resolved_version, resolved_locale = resolve_version(
-            _storage, namespace, project, version, locale
+        resolved_version, resolved_locale = (
+            storage.resolve_version(
+                namespace, project, version, locale
+            )
         )
     except (VersionNotFound, LocaleNotFound) as exc:
         raise HTTPException(

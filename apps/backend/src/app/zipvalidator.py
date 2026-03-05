@@ -1,28 +1,51 @@
+"""ZIP archive validator for documentation uploads.
+
+Enforces file-count and extracted-size limits, rejects
+path-traversal and absolute-path entries, and requires a top-level
+``index.html``. Limits are read from application settings and can
+be overridden via environment variables.
+"""
 import stat
 import zipfile
 from pathlib import Path
 
-MAX_FILES = 500
-MAX_EXTRACTED_BYTES = 500 * 1024 * 1024  # 500 MB
+from app.settings import get_settings
 
 
 def validate_zip(zip_path: Path) -> None:
     """Validate a ZIP archive before extraction.
 
-    Raises ValueError describing the violation on failure.
+    Checks enforced:
+
+    - File count does not exceed ``DOCROOT_ZIP_MAX_FILES``
+    - Total extracted size does not exceed
+      ``DOCROOT_ZIP_MAX_EXTRACTED_MB`` MB
+    - No path-traversal (``..``) entries
+    - No absolute-path entries
+    - No symlink entries
+    - Archive contains a top-level ``index.html``
+
+    :param zip_path: Path to the ZIP file to validate.
+    :raises ValueError: With a description of the violation.
     """
+    settings = get_settings()
+    max_files = settings.zip_max_files
+    max_bytes = settings.zip_max_extracted_mb * 1024 * 1024
+
     with zipfile.ZipFile(zip_path) as zf:
         members = zf.infolist()
 
-        if len(members) > MAX_FILES:
+        if len(members) > max_files:
             raise ValueError(
-                f"Archive exceeds max file count ({MAX_FILES})"
+                f"Archive exceeds max file count "
+                f"({max_files})"
             )
 
         total_size = sum(m.file_size for m in members)
-        if total_size > MAX_EXTRACTED_BYTES:
+        if total_size > max_bytes:
             raise ValueError(
-                "Archive exceeds max extracted size (500 MB)"
+                f"Archive exceeds max extracted size "
+                f"({settings.zip_max_extracted_mb} MB)"
             )
 
         has_index = False

@@ -1,58 +1,27 @@
+"""Project management routes.
+
+Provides CRUD operations for projects within a namespace.
+"""
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.acl import AclCache
 from app.auth import AuthContext, get_optional_auth
-from app.models import ProjectOut
+from app.dependencies import (
+    get_acl,
+    get_storage,
+    require_read,
+    require_write,
+)
+from app.schemas import ProjectIn, ProjectOut
 from app.storage import (
     FilesystemStorage,
     NamespaceNotFound,
     ProjectNotFound,
 )
-from app.validators import validate_namespace, validate_project
 
 router = APIRouter(tags=["projects"])
-
-_storage = FilesystemStorage()
-_acl = AclCache()
-
-
-def _require_read(
-    namespace: str,
-    auth: AuthContext | None,
-) -> None:
-    ns_dir = _storage.namespace_dir(namespace)
-    acl = _acl.get(ns_dir)
-    roles = auth.roles if auth else []
-    if not _acl.can_read(acl, roles):
-        if auth is None:
-            raise HTTPException(
-                status_code=401,
-                detail="Authentication required",
-            )
-        raise HTTPException(
-            status_code=403,
-            detail="Read permission denied",
-        )
-
-
-def _require_write(
-    namespace: str,
-    auth: AuthContext | None,
-) -> None:
-    if auth is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required",
-        )
-    ns_dir = _storage.namespace_dir(namespace)
-    acl = _acl.get(ns_dir)
-    if not _acl.can_write(acl, auth.roles):
-        raise HTTPException(
-            status_code=403,
-            detail="Write permission denied",
-        )
 
 
 @router.get(
@@ -64,15 +33,31 @@ async def list_projects(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> list[ProjectOut]:
-    validate_namespace(namespace)
-    if not _storage.namespace_exists(namespace):
+    """List all projects within a namespace.
+
+    Requires read access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name (path parameter).
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :returns: List of project objects.
+    :raises 404: If the namespace does not exist.
+    :raises 401: If unauthenticated and namespace is private.
+    :raises 403: If the caller lacks read access.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    _require_read(namespace, auth)
+    require_read(namespace, storage, acl, auth)
     try:
-        names = _storage.list_projects(namespace)
+        names = storage.list_projects(namespace)
     except NamespaceNotFound:
         raise HTTPException(
             status_code=404, detail="Namespace not found"
@@ -87,20 +72,36 @@ async def list_projects(
 )
 async def create_project(
     namespace: str,
-    body: ProjectOut,
+    body: ProjectIn,
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> ProjectOut:
-    validate_namespace(namespace)
-    validate_project(body.name)
-    if not _storage.namespace_exists(namespace):
+    """Create a new project within a namespace.
+
+    Requires write access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name (path parameter).
+    :param body: Project creation request.
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :returns: Created project object.
+    :raises 404: If the namespace does not exist.
+    :raises 401: If not authenticated.
+    :raises 403: If the caller lacks write access.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    _require_write(namespace, auth)
+    require_write(namespace, storage, acl, auth)
     try:
-        _storage.create_project(namespace, body.name)
+        storage.create_project(namespace, body.name)
     except NamespaceNotFound:
         raise HTTPException(
             status_code=404, detail="Namespace not found"
@@ -118,16 +119,31 @@ async def delete_project(
     auth: Annotated[
         AuthContext | None, Depends(get_optional_auth)
     ] = None,
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
 ) -> None:
-    validate_namespace(namespace)
-    validate_project(project)
-    if not _storage.namespace_exists(namespace):
+    """Delete a project and all its versions.
+
+    Requires write access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name (path parameter).
+    :param project: Project name (path parameter).
+    :param auth: Optional authenticated principal (injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :raises 404: If the namespace or project does not exist.
+    :raises 401: If not authenticated.
+    :raises 403: If the caller lacks write access.
+    """
+    if not storage.namespace_exists(namespace):
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    _require_write(namespace, auth)
+    require_write(namespace, storage, acl, auth)
     try:
-        _storage.delete_project(namespace, project)
+        storage.delete_project(namespace, project)
     except ProjectNotFound:
         raise HTTPException(
             status_code=404, detail="Project not found"
