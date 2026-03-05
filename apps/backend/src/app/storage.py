@@ -538,8 +538,10 @@ class FilesystemStorage:
         version_deleted = not remaining_locales
         if version_deleted:
             shutil.rmtree(version_dir, ignore_errors=True)
-
-        if version_deleted:
+            # Only update the latest symlink when the entire
+            # version was removed and it was the current latest.
+            # Skipping this check when no version was deleted
+            # avoids an unnecessary filesystem read.
             current_latest = self.get_latest(
                 namespace, project
             )

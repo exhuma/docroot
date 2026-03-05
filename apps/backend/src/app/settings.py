@@ -3,6 +3,8 @@
 Uses pydantic-settings so all configuration is validated at startup.
 All variables are prefixed with DOCROOT_.
 """
+from functools import lru_cache
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -39,15 +41,13 @@ class Settings(BaseSettings):
     zip_max_extracted_mb: int = Field(default=500)
 
 
-_settings: Settings | None = None
-
-
+@lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Return the singleton Settings instance.
 
+    Cached via :func:`functools.lru_cache` — no global variable
+    is needed.
+
     :returns: Application settings loaded from environment.
     """
-    global _settings
-    if _settings is None:
-        _settings = Settings()
-    return _settings
+    return Settings()

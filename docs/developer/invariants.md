@@ -46,6 +46,16 @@ These rules are mandatory and derive from `contract.md`.
 ## Concurrency Invariants
 
 - Concurrent uploads to different projects must be supported.
-- Concurrent uploads to same project for different versions/locales must be
-  supported.
+- Concurrent uploads to same project for different versions/locales
+  must be supported.
 - Two uploads must never create the same version+locale artifact.
+
+## Code Quality Invariants
+
+- Every test function must have a docstring starting with "Ensure…".
+- Every source file must have a module-level docstring.
+- Every function must have a docstring.
+- All environment variables must use the `DOCROOT_` prefix and be
+  declared in `app.settings.Settings`.
+- The `global` keyword must not be used; use dependency injection
+  or `functools.lru_cache` instead.

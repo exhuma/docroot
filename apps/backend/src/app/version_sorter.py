@@ -93,13 +93,13 @@ def sort_versions(
     :returns: New sorted list. Versions that fail to parse are
         placed at the end in their original relative order.
     """
-    if scheme in ("semver",):
+    if scheme == "semver":
         try:
             return sorted(versions, key=_semver_key)
         except Exception:
             return list(versions)
 
-    if scheme in ("calver",):
+    if scheme == "calver":
         try:
             return sorted(versions, key=_calver_key)
         except Exception:

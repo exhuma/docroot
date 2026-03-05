@@ -11,16 +11,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import TYPE_CHECKING
 
 import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWK, PyJWKClient
 
 from app.settings import Settings, get_settings
-
-if TYPE_CHECKING:
-    pass
 
 
 @dataclass
