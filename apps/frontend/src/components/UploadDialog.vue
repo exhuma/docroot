@@ -70,7 +70,7 @@
 
   const { t } = useI18n()
 
-  const file = ref<File[]>([])
+  const file = ref<File | null>(null)
   const versionName = ref('')
   const localeName = ref('')
   const isLatest = ref(false)
@@ -79,7 +79,7 @@
   const successMsg = ref<string | null>(null)
 
   async function onSubmit () {
-    const f = file.value[0]
+    const f = file.value
     if (!f || !versionName.value || !localeName.value) return
     loading.value = true
     errorMsg.value = null
