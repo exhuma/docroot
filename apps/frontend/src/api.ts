@@ -51,8 +51,13 @@ function projBase (ns: string, proj: string): string {
 }
 
 export const api = {
-  async listNamespaces (): Promise<Namespace[]> {
-    const res = await fetch(`${BASE}/namespaces`)
+  async listNamespaces (
+    token?: string | null,
+  ): Promise<Namespace[]> {
+    const headers: HeadersInit = token
+      ? { Authorization: `Bearer ${token}` }
+      : {}
+    const res = await fetch(`${BASE}/namespaces`, { headers })
     return handleResponse(res) as Promise<Namespace[]>
   },
 
@@ -100,8 +105,17 @@ export const api = {
     await handleResponse(res)
   },
 
-  async listProjects (ns: string): Promise<Project[]> {
-    const res = await fetch(`${nsBase(ns)}/projects`)
+  async listProjects (
+    ns: string,
+    token?: string | null,
+  ): Promise<Project[]> {
+    const headers: HeadersInit = token
+      ? { Authorization: `Bearer ${token}` }
+      : {}
+    const res = await fetch(
+      `${nsBase(ns)}/projects`,
+      { headers },
+    )
     return handleResponse(res) as Promise<Project[]>
   },
 
@@ -139,8 +153,15 @@ export const api = {
   async listVersions (
     ns: string,
     proj: string,
+    token?: string | null,
   ): Promise<VersionInfo[]> {
-    const res = await fetch(`${projBase(ns, proj)}/versions`)
+    const headers: HeadersInit = token
+      ? { Authorization: `Bearer ${token}` }
+      : {}
+    const res = await fetch(
+      `${projBase(ns, proj)}/versions`,
+      { headers },
+    )
     return handleResponse(res) as Promise<VersionInfo[]>
   },
 
@@ -149,11 +170,16 @@ export const api = {
     proj: string,
     version: string,
     locale: string,
+    token?: string | null,
   ): Promise<ResolveResult> {
+    const headers: HeadersInit = token
+      ? { Authorization: `Bearer ${token}` }
+      : {}
     const res = await fetch(
       `${projBase(ns, proj)}/resolve/`
       + `${encodeURIComponent(version)}/`
       + `${encodeURIComponent(locale)}`,
+      { headers },
     )
     return handleResponse(res) as Promise<ResolveResult>
   },

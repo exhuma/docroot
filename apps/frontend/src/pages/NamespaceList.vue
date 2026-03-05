@@ -143,7 +143,7 @@
     loading.value = true
     error.value = null
     try {
-      namespaces.value = await api.listNamespaces()
+      namespaces.value = await api.listNamespaces(token.value)
     } catch (error_) {
       error.value = (error_ as Error).message
     } finally {

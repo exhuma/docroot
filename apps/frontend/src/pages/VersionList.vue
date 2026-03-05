@@ -122,6 +122,7 @@
       versions.value = await api.listVersions(
         namespace,
         project,
+        token.value,
       )
       for (const v of versions.value) {
         if (v.locales.length > 0 && !selectedLocale[v.name]) {
