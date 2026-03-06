@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     :param zip_max_files: Maximum number of files in an uploaded ZIP.
     :param zip_max_extracted_mb: Maximum extracted size in MB for a
         ZIP archive.
+    :param log_level: Logging level (DEBUG, INFO, WARNING, ERROR).
     """
 
     model_config = SettingsConfigDict(
@@ -39,6 +40,7 @@ class Settings(BaseSettings):
     cors_origins: str = Field(default="*")
     zip_max_files: int = Field(default=500)
     zip_max_extracted_mb: int = Field(default=500)
+    log_level: str = Field(default="INFO")
 
 
 @lru_cache(maxsize=1)

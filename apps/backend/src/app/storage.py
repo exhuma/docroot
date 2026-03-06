@@ -16,6 +16,10 @@ import tomllib
 import uuid
 from pathlib import Path
 
+from app.logging import get_logger
+
+_log = get_logger(__name__)
+
 
 class VersionConflict(Exception):
     """Raised when a version+locale artifact already exists."""
@@ -327,6 +331,7 @@ class FilesystemStorage:
                 roles=all_roles,
                 versioning=versioning,
             )
+        _log.info("Namespace created: %s", name)
 
     def delete_namespace(self, name: str) -> None:
         """Delete a namespace and all its contents.
@@ -336,8 +341,12 @@ class FilesystemStorage:
         """
         ns_dir = self._namespace_dir(name)
         if not ns_dir.exists():
+            _log.warning(
+                "Namespace not found for deletion: %s", name
+            )
             raise NamespaceNotFound(name)
         shutil.rmtree(ns_dir)
+        _log.info("Namespace deleted: %s", name)
 
     def list_namespaces(self) -> list[str]:
         """Return a sorted list of all namespace names.
@@ -368,10 +377,16 @@ class FilesystemStorage:
         """
         ns_dir = self._namespace_dir(namespace)
         if not ns_dir.exists():
+            _log.warning(
+                "Namespace not found: %s", namespace
+            )
             raise NamespaceNotFound(namespace)
         proj_dir = self._project_dir(namespace, project)
         proj_dir.mkdir(parents=True, exist_ok=True)
         (proj_dir / "versions").mkdir(exist_ok=True)
+        _log.info(
+            "Project created: %s/%s", namespace, project
+        )
 
     def delete_project(
         self, namespace: str, project: str
@@ -384,8 +399,16 @@ class FilesystemStorage:
         """
         proj_dir = self._project_dir(namespace, project)
         if not proj_dir.exists():
+            _log.warning(
+                "Project not found for deletion: %s/%s",
+                namespace,
+                project,
+            )
             raise ProjectNotFound(project)
         shutil.rmtree(proj_dir)
+        _log.info(
+            "Project deleted: %s/%s", namespace, project
+        )
 
     def list_projects(self, namespace: str) -> list[str]:
         """Return a sorted list of project names in a namespace.
@@ -450,6 +473,13 @@ class FilesystemStorage:
             fcntl.flock(lock_file, fcntl.LOCK_EX)
             try:
                 if final_path.exists():
+                    _log.warning(
+                        "Version conflict: %s/%s/%s/%s",
+                        namespace,
+                        project,
+                        version,
+                        locale,
+                    )
                     raise VersionConflict(
                         f"{namespace}/{project}"
                         f"/{version}/{locale}"
@@ -477,6 +507,14 @@ class FilesystemStorage:
             finally:
                 fcntl.flock(lock_file, fcntl.LOCK_UN)
 
+        _log.info(
+            "Version installed: %s/%s/%s/%s (latest=%s)",
+            namespace,
+            project,
+            version,
+            locale,
+            latest,
+        )
         if latest:
             self.set_latest(namespace, project, version)
 
@@ -698,6 +736,12 @@ class FilesystemStorage:
                 / "latest"
             )
             if not link.is_symlink():
+                _log.warning(
+                    "Version not found: %s/%s latest "
+                    "(symlink not set)",
+                    namespace,
+                    project,
+                )
                 raise VersionNotFound(
                     "latest symlink is not set"
                 )
@@ -709,12 +753,26 @@ class FilesystemStorage:
             namespace, project, version
         )
         if not version_dir.exists():
+            _log.warning(
+                "Version not found on disk: %s/%s/%s",
+                namespace,
+                project,
+                version,
+            )
             raise VersionNotFound(version)
 
         if (version_dir / locale).is_dir():
             return (version, locale)
 
         if locale != "en" and (version_dir / "en").is_dir():
+            _log.debug(
+                "Locale '%s' not found for %s/%s/%s; "
+                "falling back to 'en'",
+                locale,
+                namespace,
+                project,
+                version,
+            )
             return (version, "en")
 
         available = sorted(
@@ -723,8 +781,23 @@ class FilesystemStorage:
             if d.is_dir() and not d.name.startswith(".")
         )
         if available:
+            _log.debug(
+                "Locale '%s' not found for %s/%s/%s; "
+                "falling back to '%s'",
+                locale,
+                namespace,
+                project,
+                version,
+                available[0],
+            )
             return (version, available[0])
 
+        _log.warning(
+            "No locale found on disk: %s/%s/%s",
+            namespace,
+            project,
+            version,
+        )
         raise LocaleNotFound(
             f"No locale found for "
             f"{namespace}/{project}/{version}"
