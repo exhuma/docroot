@@ -28,9 +28,31 @@
         v-for="ns in namespaces"
         :key="ns.name"
         link
+        :subtitle="ns.creator ? t('createdBy', { creator: ns.creator }) : undefined"
         :title="ns.name"
         :to="`/${ns.name}`"
-      />
+      >
+        <template #append>
+          <v-chip
+            v-if="ns.public_read"
+            class="mr-2"
+            color="success"
+            density="compact"
+            size="small"
+          >
+            {{ t('publicRead') }}
+          </v-chip>
+          <v-btn
+            v-if="isAuthenticated() && ns.creator !== currentSubject()"
+            density="compact"
+            size="small"
+            variant="text"
+            @click.prevent="onTakeOwnership(ns.name)"
+          >
+            {{ t('takeOwnership') }}
+          </v-btn>
+        </template>
+      </v-list-item>
     </v-list>
 
     <v-empty-state
@@ -61,6 +83,10 @@
           autofocus
           :label="t('name')"
         />
+        <v-checkbox
+          v-model="newPublicRead"
+          :label="t('publicRead')"
+        />
         <v-alert
           v-if="!isAuthenticated()"
           density="compact"
@@ -90,7 +116,7 @@
   import { onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { api, type Namespace } from '@/api'
-  import { isAuthenticated, token } from '@/auth'
+  import { getSubject, isAuthenticated, token } from '@/auth'
   import TokenDialog from '@/components/TokenDialog.vue'
 
   const { t, locale } = useI18n()
@@ -107,6 +133,11 @@
   const error = ref<string | null>(null)
   const createDialog = ref(false)
   const newName = ref('')
+  const newPublicRead = ref(false)
+
+  function currentSubject (): string {
+    return getSubject() ?? ''
+  }
 
   async function load () {
     loading.value = true
@@ -123,9 +154,24 @@
   async function onCreate () {
     if (!newName.value || !token.value) return
     try {
-      await api.createNamespace(newName.value, token.value)
+      await api.createNamespace(
+        newName.value,
+        token.value,
+        newPublicRead.value,
+      )
       createDialog.value = false
       newName.value = ''
+      newPublicRead.value = false
+      await load()
+    } catch (error_) {
+      error.value = (error_ as Error).message
+    }
+  }
+
+  async function onTakeOwnership (name: string) {
+    if (!token.value) return
+    try {
+      await api.transferOwnership(name, token.value)
       await load()
     } catch (error_) {
       error.value = (error_ as Error).message

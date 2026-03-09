@@ -59,7 +59,8 @@ def require_read(
     ns_dir = storage.namespace_dir(namespace)
     acl_data = acl.get(ns_dir)
     roles = auth.roles if auth else []
-    if not acl.can_read(acl_data, roles):
+    subject = auth.subject if auth else ""
+    if not acl.can_read(acl_data, roles, subject):
         if auth is None:
             _log.warning(
                 "Read denied on namespace '%s': "
@@ -109,7 +110,7 @@ def require_write(
         )
     ns_dir = storage.namespace_dir(namespace)
     acl_data = acl.get(ns_dir)
-    if not acl.can_write(acl_data, auth.roles):
+    if not acl.can_write(acl_data, auth.roles, auth.subject):
         _log.warning(
             "Write denied on namespace '%s': "
             "sub=%s roles=%s",

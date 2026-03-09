@@ -44,11 +44,12 @@ async def list_namespaces(
     :returns: List of namespace objects.
     """
     roles = auth.roles if auth else []
+    subject = auth.subject if auth else ""
     result: list[NamespaceOut] = []
     for name in storage.list_namespaces():
         ns_dir = storage.namespace_dir(name)
         acl_data = acl.get(ns_dir)
-        if acl.can_read(acl_data, roles):
+        if acl.can_read(acl_data, roles, subject):
             meta = storage.get_namespace_meta(name)
             access = meta.get("access", {})
             public_read = (
@@ -57,11 +58,13 @@ async def list_namespaces(
                 else False
             )
             versioning = str(meta.get("versioning", ""))
+            creator = str(meta.get("creator", ""))
             result.append(
                 NamespaceOut(
                     name=name,
                     public_read=public_read,
                     versioning=versioning,
+                    creator=creator,
                 )
             )
     return result
@@ -103,6 +106,7 @@ async def create_namespace(
         name=body.name,
         public_read=body.public_read,
         versioning=body.versioning,
+        creator=auth.subject,
     )
 
 
@@ -217,6 +221,41 @@ async def remove_namespace_role(
     require_write(namespace, storage, acl, auth)
     try:
         storage.remove_namespace_role(namespace, role)
+    except NamespaceNotFound:
+        raise HTTPException(
+            status_code=404, detail="Namespace not found"
+        )
+
+
+@router.patch("/{namespace}/owner", status_code=204)
+async def transfer_namespace_owner(
+    namespace: str,
+    auth: AuthContext = Depends(get_auth),
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
+) -> None:
+    """Transfer namespace ownership to the authenticated caller.
+
+    Any principal with write access to the namespace (including the
+    current creator) may take ownership.  After this call, the caller
+    becomes the new creator and inherits all creator privileges.
+
+    ---
+
+    :param namespace: Namespace name (path parameter).
+    :param auth: Authenticated principal (required, injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :raises 404: If the namespace does not exist.
+    :raises 403: If the caller lacks write access.
+    """
+    if not storage.namespace_exists(namespace):
+        raise HTTPException(
+            status_code=404, detail="Namespace not found"
+        )
+    require_write(namespace, storage, acl, auth)
+    try:
+        storage.transfer_ownership(namespace, auth.subject)
     except NamespaceNotFound:
         raise HTTPException(
             status_code=404, detail="Namespace not found"

@@ -313,17 +313,6 @@ class FilesystemStorage:
             all_roles: list[dict[str, object]] = list(
                 roles or []
             )
-            if creator:
-                creator_role = {
-                    "role": creator,
-                    "read": True,
-                    "write": True,
-                }
-                if not any(
-                    r.get("role") == creator
-                    for r in all_roles
-                ):
-                    all_roles.insert(0, creator_role)
             _write_namespace_toml(
                 toml_path,
                 creator=creator,
@@ -880,4 +869,43 @@ class FilesystemStorage:
             public_read=public_read,
             roles=roles,
             versioning=versioning,
+        )
+
+    def transfer_ownership(
+        self, namespace: str, new_owner: str
+    ) -> None:
+        """Transfer namespace ownership to a new owner.
+
+        Rewrites namespace.toml preserving all other fields while
+        updating only the ``creator`` field.
+
+        :param namespace: Namespace name.
+        :param new_owner: Subject of the new owner.
+        :raises NamespaceNotFound: If the namespace does not exist.
+        """
+        ns_dir = self._namespace_dir(namespace)
+        if not ns_dir.exists():
+            raise NamespaceNotFound(namespace)
+        meta = self.get_namespace_meta(namespace)
+        versioning = str(meta.get("versioning", ""))
+        access = meta.get("access", {})
+        if not isinstance(access, dict):
+            access = {}
+        public_read = bool(access.get("public_read", False))
+        roles: list[dict[str, object]] = [
+            dict(e)
+            for e in access.get("roles", [])
+            if isinstance(e, dict)
+        ]
+        _write_namespace_toml(
+            ns_dir / "namespace.toml",
+            creator=new_owner,
+            public_read=public_read,
+            roles=roles,
+            versioning=versioning,
+        )
+        _log.info(
+            "Namespace ownership transferred: %s -> %s",
+            namespace,
+            new_owner,
         )

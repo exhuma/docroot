@@ -2,6 +2,9 @@ const BASE = '/api'
 
 export interface Namespace {
   name: string
+  public_read: boolean
+  versioning: string
+  creator: string
 }
 
 export interface Project {
@@ -56,6 +59,7 @@ export const api = {
   async createNamespace (
     name: string,
     token: string,
+    publicRead = false,
   ): Promise<void> {
     const res = await fetch(`${BASE}/namespaces`, {
       method: 'POST',
@@ -63,8 +67,22 @@ export const api = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, public_read: publicRead }),
     })
+    await handleResponse(res)
+  },
+
+  async transferOwnership (
+    name: string,
+    token: string,
+  ): Promise<void> {
+    const res = await fetch(
+      `${BASE}/namespaces/${encodeURIComponent(name)}/owner`,
+      {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
     await handleResponse(res)
   },
 
