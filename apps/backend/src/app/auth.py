@@ -16,7 +16,10 @@ import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWK, PyJWKClient
 
+from app.logging import get_logger
 from app.settings import Settings, get_settings
+
+_log = get_logger(__name__)
 
 
 @dataclass
@@ -128,6 +131,11 @@ def validate_token(
     try:
         signing_key = client.get_signing_key_from_jwt(token)
     except jwt.exceptions.PyJWKClientError as exc:
+        _log.error(
+            "Signing key not found (JWKS: %s): %s",
+            settings.oauth_jwks_url,
+            exc,
+        )
         raise HTTPException(
             status_code=401,
             detail="Signing key not found",
@@ -135,6 +143,11 @@ def validate_token(
     except HTTPException:
         raise
     except Exception as exc:
+        _log.error(
+            "Token key resolution failed (JWKS: %s): %s",
+            settings.oauth_jwks_url,
+            exc,
+        )
         raise HTTPException(
             status_code=401,
             detail="Token key resolution failed",
@@ -157,11 +170,13 @@ def validate_token(
             options=decode_options,
         )
     except jwt.ExpiredSignatureError as exc:
+        _log.warning("Token rejected: expired")
         raise HTTPException(
             status_code=401,
             detail="Token has expired",
         ) from exc
     except jwt.InvalidTokenError as exc:
+        _log.warning("Token rejected: %s", exc)
         raise HTTPException(
             status_code=401,
             detail="Token validation failed",
@@ -173,6 +188,9 @@ def validate_token(
     roles = extractor(
         payload,
         {"issuer": issuer, "audience": settings.oauth_audience},
+    )
+    _log.debug(
+        "Token validated: sub=%s roles=%s", subject, roles
     )
     return AuthContext(
         subject=subject,
@@ -199,6 +217,10 @@ async def get_optional_auth(
         return None
     parts = auth_header.split(" ", 1)
     if len(parts) != 2 or parts[0].lower() != "bearer":
+        _log.warning(
+            "Malformed Authorization header from %s",
+            request.client.host if request.client else "unknown",
+        )
         raise HTTPException(
             status_code=401,
             detail="Invalid Authorization header format",
@@ -219,6 +241,7 @@ async def get_auth(
     :raises HTTPException: 401 if not authenticated.
     """
     if auth is None:
+        _log.warning("Request rejected: authentication required")
         raise HTTPException(
             status_code=401,
             detail="Authentication required",

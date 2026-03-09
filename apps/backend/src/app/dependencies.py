@@ -9,8 +9,11 @@ from fastapi import HTTPException
 
 from app.acl import AclCache
 from app.auth import AuthContext
+from app.logging import get_logger
 from app.settings import get_settings
 from app.storage import FilesystemStorage
+
+_log = get_logger(__name__)
 
 
 @lru_cache(maxsize=1)
@@ -58,10 +61,22 @@ def require_read(
     roles = auth.roles if auth else []
     if not acl.can_read(acl_data, roles):
         if auth is None:
+            _log.warning(
+                "Read denied on namespace '%s': "
+                "unauthenticated",
+                namespace,
+            )
             raise HTTPException(
                 status_code=401,
                 detail="Authentication required",
             )
+        _log.warning(
+            "Read denied on namespace '%s': "
+            "sub=%s roles=%s",
+            namespace,
+            auth.subject,
+            auth.roles,
+        )
         raise HTTPException(
             status_code=403,
             detail="Read permission denied",
@@ -84,6 +99,10 @@ def require_write(
         403 if authenticated but access denied.
     """
     if auth is None:
+        _log.warning(
+            "Write denied on namespace '%s': unauthenticated",
+            namespace,
+        )
         raise HTTPException(
             status_code=401,
             detail="Authentication required",
@@ -91,6 +110,13 @@ def require_write(
     ns_dir = storage.namespace_dir(namespace)
     acl_data = acl.get(ns_dir)
     if not acl.can_write(acl_data, auth.roles):
+        _log.warning(
+            "Write denied on namespace '%s': "
+            "sub=%s roles=%s",
+            namespace,
+            auth.subject,
+            auth.roles,
+        )
         raise HTTPException(
             status_code=403,
             detail="Write permission denied",

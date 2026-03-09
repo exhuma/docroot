@@ -12,8 +12,11 @@ from pathlib import Path
 
 from fastapi import HTTPException, UploadFile
 
+from app.logging import get_logger
 from app.storage import FilesystemStorage, VersionConflict
 from app.zipvalidator import validate_zip
+
+_log = get_logger(__name__)
 
 
 async def install_upload(
@@ -51,6 +54,15 @@ async def install_upload(
             datetime.now(timezone.utc).isoformat()
         )
 
+    _log.info(
+        "Upload started: %s/%s/%s/%s by %s",
+        namespace,
+        project,
+        version,
+        locale,
+        uploader_subject,
+    )
+
     uploads_tmp = storage.data_root / ".uploads"
     uploads_tmp.mkdir(parents=True, exist_ok=True)
     tmpdir = Path(tempfile.mkdtemp(dir=uploads_tmp))
@@ -61,6 +73,15 @@ async def install_upload(
         try:
             validate_zip(zip_path)
         except ValueError as exc:
+            _log.warning(
+                "Upload rejected (invalid ZIP): "
+                "%s/%s/%s/%s — %s",
+                namespace,
+                project,
+                version,
+                locale,
+                exc,
+            )
             raise HTTPException(
                 status_code=422, detail=str(exc)
             ) from exc
