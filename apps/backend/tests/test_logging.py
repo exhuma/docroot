@@ -1,7 +1,9 @@
 """Tests for the logging setup module."""
 import logging
 
-from app.logging import get_logger, setup_logging
+import pytest
+
+from app.logging import _UVICORN_LOGGERS, get_logger, setup_logging
 
 
 def test_setup_logging_info():
@@ -44,3 +46,25 @@ def test_get_logger_child_of_app():
     parent = logging.getLogger("app")
     child = get_logger("app.storage")
     assert child.parent is parent
+
+
+@pytest.mark.parametrize("name", _UVICORN_LOGGERS)
+def test_uvicorn_logger_has_no_own_handlers(name):
+    """Ensure uvicorn loggers have no handlers after setup_logging."""
+    # Simulate uvicorn installing a handler before our setup runs.
+    uv_log = logging.getLogger(name)
+    uv_log.addHandler(logging.StreamHandler())
+    uv_log.propagate = False
+
+    setup_logging("INFO")
+
+    assert uv_log.handlers == []
+    assert uv_log.propagate is True
+
+
+@pytest.mark.parametrize("name", _UVICORN_LOGGERS)
+def test_uvicorn_logger_level_matches_app(name):
+    """Ensure uvicorn loggers are set to the configured level."""
+    setup_logging("WARNING")
+    uv_log = logging.getLogger(name)
+    assert uv_log.level == logging.WARNING
