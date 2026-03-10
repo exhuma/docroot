@@ -8,6 +8,8 @@ Use this guide when working on this repository.
 2. [Architecture](architecture.md)
 3. [Security](security.md)
 4. [Code Style](code-style.md)
+5. [Running Locally](running-locally.md)
+6. [nginx Auth Analysis](nginx-auth-analysis.md)
 
 ## Scope
 

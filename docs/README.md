@@ -12,5 +12,9 @@ root.
 - `developer/architecture.md` — component and boundary guidance.
 - `developer/security.md` — security controls and checklists.
 - `developer/code-style.md` — formatting and style requirements.
+- `developer/running-locally.md` — how to run the stack locally
+  (backend + frontend only, or full stack with nginx).
+- `developer/nginx-auth-analysis.md` — analysis of options for
+  enforcing namespace ACL on nginx-served static files.
 
 All legacy or unrelated copied documentation has been removed.
