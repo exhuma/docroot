@@ -18,3 +18,23 @@ export function setToken (t: string | null): void {
 export function isAuthenticated (): boolean {
   return token.value !== null
 }
+
+export function getSubject (): string | null {
+  if (!token.value) {
+    return null
+  }
+  try {
+    const parts = token.value.split('.')
+    if (parts.length !== 3) {
+      return null
+    }
+    // JWTs use base64url; convert to standard base64 before decoding
+    const b64 = (parts[1] as string)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/')
+    const payload = JSON.parse(atob(b64))
+    return typeof payload.sub === 'string' ? payload.sub : null
+  } catch {
+    return null
+  }
+}

@@ -89,7 +89,7 @@
     loading.value = true
     error.value = null
     try {
-      projects.value = await api.listProjects(namespace)
+      projects.value = await api.listProjects(namespace, token.value)
     } catch (error_) {
       error.value = (error_ as Error).message
     } finally {

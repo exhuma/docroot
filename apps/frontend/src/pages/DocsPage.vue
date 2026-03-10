@@ -61,6 +61,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { api, type ResolveResult, type VersionInfo }
     from '@/api'
+  import { token } from '@/auth'
 
   const { t } = useI18n()
   const route = useRoute()
@@ -106,6 +107,7 @@
         project,
         selectedVersion.value,
         selectedLocale.value,
+        token.value,
       )
       fallbackUsed.value = resolved.value.fallback_used
     } catch (error_) {
@@ -130,6 +132,7 @@
       versions.value = await api.listVersions(
         namespace,
         project,
+        token.value,
       )
     } catch (error_) {
       error.value = (error_ as Error).message

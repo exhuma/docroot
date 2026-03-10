@@ -69,20 +69,26 @@ class AclCache:
         self,
         acl: dict[str, object],
         roles: list[str],
+        subject: str = "",
     ) -> bool:
-        """Return True if the given roles grant read access.
+        """Return True if the given roles or subject grant read access.
 
         Public namespaces (``public_read = true``) are always
-        readable.
+        readable. The namespace creator identified by *subject*
+        is always granted read access.
 
         :param acl: Parsed ACL data from :meth:`get`.
         :param roles: Roles of the authenticated principal.
+        :param subject: JWT subject of the authenticated principal.
         :returns: True if read is permitted.
         """
         access = acl.get("access")
         if not isinstance(access, dict):
             return False
         if access.get("public_read", False):
+            return True
+        creator = acl.get("creator")
+        if subject and creator and subject == str(creator):
             return True
         for entry in access.get("roles", []):
             if not isinstance(entry, dict):
@@ -98,16 +104,24 @@ class AclCache:
         self,
         acl: dict[str, object],
         roles: list[str],
+        subject: str = "",
     ) -> bool:
-        """Return True if the given roles grant write access.
+        """Return True if the given roles or subject grant write access.
+
+        The namespace creator identified by *subject* is always
+        granted write access.
 
         :param acl: Parsed ACL data from :meth:`get`.
         :param roles: Roles of the authenticated principal.
+        :param subject: JWT subject of the authenticated principal.
         :returns: True if write is permitted.
         """
         access = acl.get("access")
         if not isinstance(access, dict):
             return False
+        creator = acl.get("creator")
+        if subject and creator and subject == str(creator):
+            return True
         for entry in access.get("roles", []):
             if not isinstance(entry, dict):
                 continue

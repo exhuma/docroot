@@ -33,6 +33,9 @@ const messages = {
     markAsLatest: 'Mark as latest',
     isLatest: 'Is latest',
     viewDocs: 'View docs',
+    publicRead: 'Public read',
+    createdBy: 'Created by: {creator}',
+    takeOwnership: 'Take ownership',
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -67,6 +70,9 @@ const messages = {
     markAsLatest: 'Marquer comme dernière',
     isLatest: 'Est la dernière',
     viewDocs: 'Voir la doc',
+    publicRead: 'Lecture publique',
+    createdBy: 'Créé par : {creator}',
+    takeOwnership: 'Prendre possession',
   },
   de: {
     namespaces: 'Namensräume',
@@ -101,6 +107,9 @@ const messages = {
     markAsLatest: 'Als aktuell markieren',
     isLatest: 'Ist aktuell',
     viewDocs: 'Dokumentation anzeigen',
+    publicRead: 'Öffentlich lesbar',
+    createdBy: 'Erstellt von: {creator}',
+    takeOwnership: 'Eigentümer werden',
   },
 }
 

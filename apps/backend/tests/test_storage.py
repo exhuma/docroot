@@ -197,3 +197,63 @@ def test_delete_version_updates_latest(
     assert storage.get_latest("ns", "proj") == "2.0"
     storage.delete_version("ns", "proj", "2.0", "en")
     assert storage.get_latest("ns", "proj") == "1.0"
+
+
+def test_create_namespace_no_creator_role(
+    storage: FilesystemStorage,
+):
+    """Ensure create_namespace does not add creator as a role entry."""
+    import tomllib
+    storage.create_namespace(
+        "ns-owner", creator="owner@example.com"
+    )
+    ns_dir = storage.namespace_dir("ns-owner")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    roles = data.get("access", {}).get("roles", [])
+    role_names = [r.get("role") for r in roles]
+    assert "owner@example.com" not in role_names
+    assert data.get("creator") == "owner@example.com"
+
+
+def test_transfer_ownership(storage: FilesystemStorage):
+    """Ensure transfer_ownership updates the creator field."""
+    import tomllib
+    storage.create_namespace(
+        "ns-transfer", creator="original@example.com"
+    )
+    storage.transfer_ownership("ns-transfer", "new@example.com")
+    ns_dir = storage.namespace_dir("ns-transfer")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("creator") == "new@example.com"
+
+
+def test_transfer_ownership_preserves_roles(
+    storage: FilesystemStorage,
+):
+    """Ensure transfer_ownership preserves existing ACL roles."""
+    import tomllib
+    storage.create_namespace(
+        "ns-preserve",
+        creator="original@example.com",
+        roles=[{"role": "editors", "read": True, "write": True}],
+    )
+    storage.transfer_ownership(
+        "ns-preserve", "new@example.com"
+    )
+    ns_dir = storage.namespace_dir("ns-preserve")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("creator") == "new@example.com"
+    roles = data.get("access", {}).get("roles", [])
+    assert any(r.get("role") == "editors" for r in roles)
+
+
+def test_transfer_ownership_not_found(
+    storage: FilesystemStorage,
+):
+    """Ensure transfer_ownership raises NamespaceNotFound."""
+    from app.storage import NamespaceNotFound
+    with pytest.raises(NamespaceNotFound):
+        storage.transfer_ownership("no-such-ns", "x@example.com")

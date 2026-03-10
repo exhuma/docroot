@@ -77,8 +77,10 @@ class NamespaceOut(BaseModel):
     :param public_read: Whether the namespace is publicly
         readable.
     :param versioning: Configured versioning scheme.
+    :param creator: Subject of the namespace creator.
     """
 
     name: str
     public_read: bool = False
     versioning: str = ""
+    creator: str = ""
