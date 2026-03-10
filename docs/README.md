@@ -14,7 +14,7 @@ root.
 - `developer/code-style.md` — formatting and style requirements.
 - `developer/running-locally.md` — how to run the stack locally
   (backend + frontend only, or full stack with nginx).
-- `developer/nginx-auth-analysis.md` — analysis of options for
-  enforcing namespace ACL on nginx-served static files.
+- `developer/nginx-auth-analysis.md` — ADR-001: nginx static file
+  authorization via `auth_request`.
 
 All legacy or unrelated copied documentation has been removed.

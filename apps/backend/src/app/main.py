@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.logging import get_logger, setup_logging
+from app.routes.internal import router as internal_router
 from app.routes.namespaces import router as namespaces_router
 from app.routes.projects import router as projects_router
 from app.routes.versions import router as versions_router
@@ -112,6 +113,7 @@ def create_app(
         )
         return response
 
+    application.include_router(internal_router)
     application.include_router(namespaces_router)
     application.include_router(projects_router)
     application.include_router(versions_router)
