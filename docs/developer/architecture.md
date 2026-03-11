@@ -47,9 +47,30 @@ This repository is a monorepo with separate runtime services.
 - Docs are rendered by iframe against nginx static routes.
 - Version/locale selection behavior must follow API resolution rules.
 
+## nginx Authorization Gate
+
+Static documentation requests must not bypass access control.
+The flow is:
+
+1. Browser requests `/{ns}/{project}/{version}/{locale}/...`.
+2. nginx matches the static-docs location and invokes
+   `auth_request /internal/auth`.
+3. nginx proxies a subrequest to `GET /api/auth` on FastAPI,
+   forwarding the `Authorization` header and setting
+   `X-Original-URI` to the original request path.
+4. FastAPI extracts the namespace from `X-Original-URI`,
+   evaluates the namespace ACL, and returns 200, 401, or 403.
+5. If 200, nginx serves the static file from `/data`.
+   Otherwise nginx returns the error status to the browser.
+
+The `/internal/auth` location is declared `internal` in nginx
+and is unreachable by external clients.
+
 ## Prohibited Architectural Drift
 
 - No direct filesystem writes in API handlers.
 - No bypass of resolver for `latest` and locale fallbacks.
 - No database, ORM, queue, or background-worker introduction in v1.
 - No upstream/downstream split assumptions in repository design.
+- No static documentation served by nginx without passing
+  through the FastAPI `auth_request` gate.

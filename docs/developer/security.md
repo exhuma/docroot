@@ -47,6 +47,20 @@ This project is a stateless OAuth2 resource server with ACL-controlled writes.
 - nginx serves static documentation from `/data`.
 - nginx enforces upload request limits and max body size.
 - FastAPI should not stream large static files directly.
+- Every static documentation request MUST pass through the
+  FastAPI `auth_request` gate (`GET /api/auth`) before nginx
+  serves the file.  nginx uses the `auth_request` directive to
+  delegate authorization; FastAPI returns 200 (allow), 401
+  (unauthenticated), or 403 (forbidden) based on the namespace
+  ACL.
+- The internal auth location (`/internal/auth`) is marked
+  `internal` in nginx and cannot be accessed by external
+  clients.
+- The `X-Original-URI` header carries the original request path
+  to `GET /api/auth` so it can extract the namespace and
+  evaluate the correct ACL.
+- When the API server is unreachable, nginx fails closed
+  (returns 500) rather than open.
 
 ## Security Review Checklist
 
@@ -55,3 +69,5 @@ This project is a stateless OAuth2 resource server with ACL-controlled writes.
 - ZIP validation includes traversal and symlink rejection.
 - Filesystem writes are atomic and immutable.
 - Resolver is used for `latest` and locale handling everywhere.
+- Static documentation routes are guarded by nginx
+  `auth_request` delegating to `GET /api/auth`.
