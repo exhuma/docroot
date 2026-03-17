@@ -1,66 +1,111 @@
 <template>
-  <v-app-bar>
-    <v-btn
-      icon="mdi-arrow-left"
-      :to="`/${namespace}/${project}`"
-    />
-    <v-toolbar-title>
-      {{ namespace }}/{{ project }}
-    </v-toolbar-title>
-    <v-spacer />
-    <v-select
-      v-model="selectedVersion"
-      class="mr-2"
-      density="compact"
-      hide-details
-      :items="versionNames"
-      :label="t('selectVersion')"
-      style="max-width: 160px"
-      @update:model-value="onVersionChange"
-    />
-    <v-select
-      v-model="selectedLocale"
-      class="mr-2"
-      density="compact"
-      hide-details
-      :items="availableLocales"
-      :label="t('selectLocale')"
-      style="max-width: 120px"
-      @update:model-value="onLocaleChange"
-    />
-  </v-app-bar>
+  <!-- Full-screen documentation iframe -->
+  <iframe
+    v-if="iframeSrc"
+    class="docs-frame"
+    :src="iframeSrc"
+  />
 
-  <v-container>
-    <v-alert
-      v-if="fallbackUsed && resolved"
-      class="mb-4"
-      type="info"
-    >
-      {{ t('fallbackNotice', { locale: resolved.locale }) }}
-    </v-alert>
-
-    <v-alert v-if="error" class="mb-4" type="error">
+  <!-- Error shown floating when iframe cannot load -->
+  <div v-if="error" class="docs-error-overlay">
+    <v-alert type="error">
       {{ error }}
     </v-alert>
+  </div>
 
-    <iframe
-      v-if="iframeSrc"
-      :src="iframeSrc"
-      style="
-        width: 100%;
-        height: calc(100vh - 120px);
-        border: none;
-      "
-    />
-  </v-container>
+  <!--
+    Floating metadata/version-switcher panel.
+    - Anchored to bottom-right by default.
+    - Drag the title bar to reposition it.
+    - Click the chevron to collapse/expand.
+  -->
+  <div
+    ref="panelEl"
+    class="docs-panel"
+    :style="panelStyle"
+  >
+    <!-- Drag handle row -->
+    <div class="docs-panel__handle">
+      <span
+        :aria-label="t('dragPanel')"
+        class="docs-panel__title"
+        role="button"
+        tabindex="0"
+        :title="`${namespace}/${project}`"
+        @keydown="onPanelKeydown"
+        @mousedown="startDrag"
+      >
+        {{ namespace }}/{{ project }}
+      </span>
+      <v-btn
+        color="white"
+        density="compact"
+        :icon="
+          expanded
+            ? 'mdi-chevron-down'
+            : 'mdi-chevron-up'
+        "
+        variant="text"
+        @click="expanded = !expanded"
+      />
+      <v-btn
+        color="white"
+        density="compact"
+        icon="mdi-arrow-left"
+        :to="`/${namespace}/${project}`"
+        variant="text"
+      />
+    </div>
+
+    <!-- Expandable body with version/locale selectors -->
+    <div v-if="expanded" class="docs-panel__body">
+      <v-alert
+        v-if="fallbackUsed && resolved"
+        class="mb-3"
+        density="compact"
+        type="info"
+      >
+        {{
+          t('fallbackNotice', { locale: resolved.locale })
+        }}
+      </v-alert>
+
+      <v-select
+        v-model="selectedVersion"
+        class="mb-3"
+        density="compact"
+        hide-details
+        :items="versionNames"
+        :label="t('selectVersion')"
+        @update:model-value="onVersionChange"
+      />
+
+      <v-select
+        v-model="selectedLocale"
+        density="compact"
+        hide-details
+        :items="availableLocales"
+        :label="t('selectLocale')"
+        @update:model-value="onLocaleChange"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-  import { computed, onMounted, ref } from 'vue'
+  import {
+    computed,
+    onMounted,
+    onUnmounted,
+    ref,
+  } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
-  import { api, type ResolveResult, type VersionInfo }
-    from '@/api'
+  import {
+    api,
+    type ResolveResult,
+    type VersionInfo,
+  } from '@/api'
   import { token } from '@/auth'
 
   const { t } = useI18n()
@@ -78,6 +123,102 @@
   const selectedVersion = ref(initVersion)
   const selectedLocale = ref(initLocale)
   const fallbackUsed = ref(false)
+  const expanded = ref(true)
+  const panelEl = ref<HTMLElement | null>(null)
+
+  /** Pixel coordinates used while dragging. */
+  type PanelPos = {
+    top: string | null
+    left: string | null
+    bottom: string | null
+    right: string | null
+  }
+
+  /**
+   * Panel position.  Before any drag the panel is anchored to
+   * the bottom-right via CSS bottom/right.  After the first
+   * drag it switches to top/left absolute coordinates so the
+   * element follows the cursor exactly.
+   */
+  const panelPos = ref<PanelPos>({
+    top: null,
+    left: null,
+    bottom: '16px',
+    right: '16px',
+  })
+
+  const panelStyle = computed(() => {
+    const s: Record<string, string> = {
+      position: 'fixed',
+      zIndex: '9999',
+    }
+    if (panelPos.value.top === null) {
+      s.bottom = panelPos.value.bottom ?? '16px'
+      s.right = panelPos.value.right ?? '16px'
+    } else {
+      s.top = panelPos.value.top
+      s.left = panelPos.value.left ?? '16px'
+    }
+    return s
+  })
+
+  let dragOffsetX = 0
+  let dragOffsetY = 0
+
+  function onDrag (event: MouseEvent) {
+    panelPos.value = {
+      top: `${event.clientY - dragOffsetY}px`,
+      left: `${event.clientX - dragOffsetX}px`,
+      bottom: null,
+      right: null,
+    }
+  }
+
+  function stopDrag () {
+    window.removeEventListener('mousemove', onDrag)
+    window.removeEventListener('mouseup', stopDrag)
+  }
+
+  function startDrag (event: MouseEvent) {
+    if (!panelEl.value) return
+    const rect = panelEl.value.getBoundingClientRect()
+    dragOffsetX = event.clientX - rect.left
+    dragOffsetY = event.clientY - rect.top
+    // Snapshot current position as top/left so the panel
+    // moves smoothly relative to the pointer.
+    panelPos.value = {
+      top: `${rect.top}px`,
+      left: `${rect.left}px`,
+      bottom: null,
+      right: null,
+    }
+    window.addEventListener('mousemove', onDrag)
+    window.addEventListener('mouseup', stopDrag)
+  }
+
+  /** Move the panel 16 px per arrow-key press. */
+  function onPanelKeydown (event: KeyboardEvent) {
+    const STEP = 16
+    const rect = panelEl.value?.getBoundingClientRect()
+    if (!rect) return
+    const top = rect.top
+    const left = rect.left
+    const moves: Record<string, [number, number]> = {
+      ArrowUp: [0, -STEP],
+      ArrowDown: [0, STEP],
+      ArrowLeft: [-STEP, 0],
+      ArrowRight: [STEP, 0],
+    }
+    const delta = moves[event.key]
+    if (!delta) return
+    event.preventDefault()
+    panelPos.value = {
+      top: `${top + delta[1]}px`,
+      left: `${left + delta[0]}px`,
+      bottom: null,
+      right: null,
+    }
+  }
 
   const versionNames = computed(() =>
     versions.value.map(v => v.name),
@@ -139,4 +280,79 @@
     }
     await resolve()
   })
+
+  onUnmounted(() => {
+    stopDrag()
+  })
 </script>
+
+<style scoped>
+  /** Full-screen documentation frame. */
+  .docs-frame {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    border: none;
+    z-index: 0;
+  }
+
+  /**
+   * Error alert centred at the top of the viewport,
+   * layered above the iframe.
+   */
+  .docs-error-overlay {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    max-width: 600px;
+    width: 90%;
+  }
+
+  /** Floating panel container. */
+  .docs-panel {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    min-width: 240px;
+  }
+
+  /**
+   * Drag-handle row at the top of the panel.
+   * Only the title text area triggers dragging so
+   * that the buttons remain clickable.
+   */
+  .docs-panel__handle {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 4px 4px 10px;
+    background: #1565c0;
+    color: white;
+    user-select: none;
+  }
+
+  /** Flexible title that acts as the drag target. */
+  .docs-panel__title {
+    flex: 1;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: grab;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .docs-panel__title:active {
+    cursor: grabbing;
+  }
+
+  /** Body padding for the version/locale selectors. */
+  .docs-panel__body {
+    padding: 12px;
+  }
+</style>

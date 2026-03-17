@@ -36,6 +36,7 @@ const messages = {
     publicRead: 'Public read',
     createdBy: 'Created by: {creator}',
     takeOwnership: 'Take ownership',
+    dragPanel: 'Drag to reposition panel',
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -73,6 +74,7 @@ const messages = {
     publicRead: 'Lecture publique',
     createdBy: 'Créé par : {creator}',
     takeOwnership: 'Prendre possession',
+    dragPanel: 'Faire glisser pour repositionner',
   },
   de: {
     namespaces: 'Namensräume',
@@ -110,6 +112,7 @@ const messages = {
     publicRead: 'Öffentlich lesbar',
     createdBy: 'Erstellt von: {creator}',
     takeOwnership: 'Eigentümer werden',
+    dragPanel: 'Ziehen zum Verschieben',
   },
 }
 
