@@ -10,6 +10,48 @@ This project is a stateless OAuth2 resource server with ACL-controlled writes.
 - Attach authenticated principal to request context after validation.
 - Do not introduce session-based auth or server-side session state.
 
+## Browser Token Storage — Two-Store Design
+
+The frontend stores the JWT in two places simultaneously, each
+serving a distinct audience:
+
+| Store | Who reads it | Purpose |
+|---|---|---|
+| `localStorage` (`docroot_token`) | JavaScript | `fetch()` calls construct `Authorization: Bearer <token>` headers. `isAuthenticated()`, the token dialog, and upload forms all read from the reactive `token` ref. |
+| `session` cookie (`HttpOnly; SameSite=Lax`) | The browser | Attached automatically to every same-origin request, including `<iframe>` navigations that cannot carry custom headers. nginx's `auth_request` subrequest inherits the cookie, enabling access-controlled doc serving inside the iframe. |
+
+Neither store can be dropped:
+
+- The `session` cookie is `HttpOnly`, so JavaScript cannot read
+  it. The SPA therefore needs `localStorage` to hold the raw
+  token for use in `Authorization` headers.
+- `localStorage` values are invisible to automatic browser
+  credential attachment on navigations, so the cookie is still
+  required for the iframe.
+
+The exchange flow is:
+
+1. User supplies a bearer token via the token dialog.
+2. `setToken(t)` in `auth.ts` writes the token to `localStorage`
+   and calls `POST /api/auth/session` with the token in the
+   `Authorization` header.
+3. The backend validates the JWT and responds with
+   `Set-Cookie: session=<token>; HttpOnly; SameSite=Lax; Path=/`.
+4. Subsequent iframe navigations and page refreshes carry the
+   `session` cookie automatically.
+5. On logout, `setToken(null)` removes the `localStorage` entry
+   and calls `DELETE /api/auth/session`, which clears the cookie
+   via `Max-Age=0`.
+6. On page refresh, `auth.ts` calls `POST /api/auth/session`
+   immediately if a token is already in `localStorage`, keeping
+   the cookie current across hard reloads.
+
+On the backend, `get_optional_auth` resolves credentials in
+priority order: `Authorization` header → `session` cookie →
+unauthenticated (`None`). No server-side state is created; the
+cookie payload is the raw JWT and is validated identically to
+the header path.
+
 ## Role Extraction and Authorization
 
 - Use pluggable role extraction (`OAUTH_ROLE_EXTRACTOR`).

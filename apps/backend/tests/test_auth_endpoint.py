@@ -149,3 +149,101 @@ def test_unknown_namespace_returns_404(tmp_path: Path) -> None:
         },
     )
     assert response.status_code == 404
+
+
+def test_private_namespace_session_cookie_returns_200(
+    tmp_path: Path,
+) -> None:
+    """Ensure a valid session cookie grants access to a private namespace.
+
+    The iframe cannot attach Authorization headers; the backend must
+    fall back to the ``session`` cookie set by ``POST /api/auth/session``.
+    """
+    from app import auth as auth_mod
+
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("privns", public_read=False)
+    ns_dir = storage.namespace_dir("privns")
+    _write_ns_toml(
+        ns_dir,
+        (
+            'creator = "user@example.com"\n'
+            "[access]\n"
+            "public_read = false\n"
+        ),
+    )
+
+    from app.auth import AuthContext
+
+    fixed_ctx = AuthContext(
+        subject="user@example.com",
+        roles=[],
+        raw_token="valid.jwt",
+    )
+    original_validate = auth_mod.validate_token
+
+    def fake_validate(token, settings):
+        """Return a fixed AuthContext for the test token."""
+        assert token == "valid.jwt"
+        return fixed_ctx
+
+    auth_mod.validate_token = fake_validate
+    try:
+        response = client.get(
+            "/api/auth",
+            headers={"X-Original-URI": "/privns/proj/1.0/en/"},
+            cookies={"session": "valid.jwt"},
+        )
+    finally:
+        auth_mod.validate_token = original_validate
+
+    assert response.status_code == 200
+
+
+def test_private_namespace_invalid_session_cookie_returns_401(
+    tmp_path: Path,
+) -> None:
+    """Ensure a malformed session cookie is rejected with 401."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("privns", public_read=False)
+    ns_dir = storage.namespace_dir("privns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = false\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={"X-Original-URI": "/privns/proj/1.0/en/"},
+        cookies={"session": "not.a.valid.jwt"},
+    )
+    assert response.status_code == 401
+
+
+def test_authorization_header_takes_priority_over_session_cookie(
+    tmp_path: Path,
+) -> None:
+    """Ensure Authorization header is checked before the session cookie.
+
+    When both are present the header is used; if the header is malformed
+    the request is rejected even if the cookie would be valid.
+    """
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("privns", public_read=False)
+    ns_dir = storage.namespace_dir("privns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = false\n",
+    )
+
+    # Malformed header should cause a 401 despite a session cookie
+    # being present — the header takes precedence.
+    response = client.get(
+        "/api/auth",
+        headers={
+            "X-Original-URI": "/privns/proj/1.0/en/",
+            "Authorization": "NotBearer token",
+        },
+        cookies={"session": "some.cookie.value"},
+    )
+    assert response.status_code == 401

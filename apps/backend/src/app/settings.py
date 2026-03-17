@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     :param zip_max_extracted_mb: Maximum extracted size in MB for a
         ZIP archive.
     :param log_level: Logging level (DEBUG, INFO, WARNING, ERROR).
+    :param cookie_secure: Append the ``Secure`` attribute to the
+        session cookie (required for HTTPS deployments).
     """
 
     model_config = SettingsConfigDict(
@@ -41,6 +43,7 @@ class Settings(BaseSettings):
     zip_max_files: int = Field(default=500)
     zip_max_extracted_mb: int = Field(default=500)
     log_level: str = Field(default="INFO")
+    cookie_secure: bool = Field(default=False)
 
 
 @lru_cache(maxsize=1)
