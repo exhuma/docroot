@@ -108,6 +108,36 @@ def test_empty_path_returns_400(tmp_path: Path) -> None:
     assert response.status_code == 400
 
 
+def test_spa_docs_path_extracts_correct_namespace(
+    tmp_path: Path,
+) -> None:
+    """Ensure auth check works for the SPA docs-wrapper URL.
+
+    The SPA wrapper URL has the form
+    /{namespace}/{project}/docs/{version}/{locale}.  The 'docs'
+    segment is a UI prefix, not a version.  The endpoint must
+    extract the namespace from the first segment and evaluate the
+    correct ACL.
+    """
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace(
+        "myns", public_read=True
+    )
+    ns_dir = storage.namespace_dir("myns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = true\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={
+            "X-Original-URI": "/myns/proj/docs/1.0/en"
+        },
+    )
+    assert response.status_code == 200
+
+
 def test_unknown_namespace_returns_404(tmp_path: Path) -> None:
     """Ensure a request for an unknown namespace returns 404."""
     client, _ = _make_client(tmp_path)
