@@ -14,51 +14,57 @@
   </div>
 
   <!--
-    Floating metadata/version-switcher panel.
+    Floating version-switcher card.
     - Anchored to bottom-right by default.
-    - Drag the title bar to reposition it.
+    - Drag the toolbar to reposition it.
     - Click the chevron to collapse/expand.
   -->
-  <div
+  <v-card
     ref="panelEl"
-    class="docs-panel"
     :style="panelStyle"
+    elevation="8"
+    min-width="240"
+    rounded="lg"
   >
-    <!-- Drag handle row -->
-    <div class="docs-panel__handle">
-      <span
-        :aria-label="t('dragPanel')"
-        class="docs-panel__title"
-        role="button"
-        tabindex="0"
-        :title="`${namespace}/${project}`"
-        @keydown="onPanelKeydown"
-        @mousedown="startDrag"
-      >
+    <!-- Toolbar acts as drag handle -->
+    <v-toolbar
+      :aria-label="t('dragPanel')"
+      color="primary"
+      density="compact"
+      role="button"
+      tabindex="0"
+      :title="`${namespace}/${project}`"
+      style="cursor: grab; user-select: none;"
+      @keydown="onPanelKeydown"
+      @mousedown="startDrag"
+    >
+      <v-toolbar-title class="text-body-2 font-weight-medium">
         {{ namespace }}/{{ project }}
-      </span>
-      <v-btn
-        color="white"
-        density="compact"
-        :icon="
-          expanded
-            ? 'mdi-chevron-down'
-            : 'mdi-chevron-up'
-        "
-        variant="text"
-        @click="expanded = !expanded"
-      />
-      <v-btn
-        color="white"
-        density="compact"
-        icon="mdi-arrow-left"
-        :to="`/${namespace}/${project}`"
-        variant="text"
-      />
-    </div>
+      </v-toolbar-title>
+      <template #append>
+        <v-btn
+          color="white"
+          density="compact"
+          :icon="
+            expanded
+              ? 'mdi-chevron-down'
+              : 'mdi-chevron-up'
+          "
+          variant="text"
+          @click.stop="expanded = !expanded"
+        />
+        <v-btn
+          color="white"
+          density="compact"
+          icon="mdi-arrow-left"
+          :to="`/${namespace}/${project}`"
+          variant="text"
+        />
+      </template>
+    </v-toolbar>
 
     <!-- Expandable body with version/locale selectors -->
-    <div v-if="expanded" class="docs-panel__body">
+    <v-card-text v-if="expanded">
       <v-alert
         v-if="fallbackUsed && resolved"
         class="mb-3"
@@ -88,8 +94,8 @@
         :label="t('selectLocale')"
         @update:model-value="onLocaleChange"
       />
-    </div>
-  </div>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup lang="ts">
@@ -124,7 +130,8 @@
   const selectedLocale = ref(initLocale)
   const fallbackUsed = ref(false)
   const expanded = ref(true)
-  const panelEl = ref<HTMLElement | null>(null)
+  // v-card is a component; access the root DOM element via .$el.
+  const panelEl = ref<{ $el: HTMLElement } | null>(null)
 
   /** Pixel coordinates used while dragging. */
   type PanelPos = {
@@ -150,7 +157,10 @@
   const panelStyle = computed(() => {
     const s: Record<string, string> = {
       position: 'fixed',
-      zIndex: '9999',
+      // Keep the card above the iframe (z-index 0) but below
+      // Vuetify's teleported overlay layer (~2000) so that
+      // v-select dropdown menus render on top of the card.
+      zIndex: '10',
     }
     if (panelPos.value.top === null) {
       s.bottom = panelPos.value.bottom ?? '16px'
@@ -181,7 +191,7 @@
 
   function startDrag (event: MouseEvent) {
     if (!panelEl.value) return
-    const rect = panelEl.value.getBoundingClientRect()
+    const rect = panelEl.value.$el.getBoundingClientRect()
     dragOffsetX = event.clientX - rect.left
     dragOffsetY = event.clientY - rect.top
     // Snapshot current position as top/left so the panel
@@ -199,7 +209,7 @@
   /** Move the panel 16 px per arrow-key press. */
   function onPanelKeydown (event: KeyboardEvent) {
     const STEP = 16
-    const rect = panelEl.value?.getBoundingClientRect()
+    const rect = panelEl.value?.$el?.getBoundingClientRect()
     if (!rect) return
     const top = rect.top
     const left = rect.left
@@ -312,47 +322,8 @@
     width: 90%;
   }
 
-  /** Floating panel container. */
-  .docs-panel {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-    min-width: 240px;
-  }
-
-  /**
-   * Drag-handle row at the top of the panel.
-   * Only the title text area triggers dragging so
-   * that the buttons remain clickable.
-   */
-  .docs-panel__handle {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 4px 4px 4px 10px;
-    background: #1565c0;
-    color: white;
-    user-select: none;
-  }
-
-  /** Flexible title that acts as the drag target. */
-  .docs-panel__title {
-    flex: 1;
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: grab;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .docs-panel__title:active {
-    cursor: grabbing;
-  }
-
-  /** Body padding for the version/locale selectors. */
-  .docs-panel__body {
-    padding: 12px;
+  /** Toolbar cursor switches to grabbing while dragging. */
+  .v-toolbar:active {
+    cursor: grabbing !important;
   }
 </style>
