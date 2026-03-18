@@ -13,6 +13,15 @@
   },
   "clients": [
     {
+      "clientId": "docroot-api",
+      "name": "Docroot API",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
       "clientId": "docroot-ui",
       "name": "Docroot UI",
       "enabled": true,

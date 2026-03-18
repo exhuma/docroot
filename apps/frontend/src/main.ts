@@ -23,9 +23,10 @@ const app = createApp(App)
 
 registerPlugins(app)
 
-app.mount('#app')
-
-// Initialise OIDC in the background so the UserManager is ready
-// when the user clicks Login.  Errors are silently ignored here;
-// the login button will fall back to manual token entry.
-initOidc().catch(() => undefined)
+// Initialise OIDC before mounting so the UserManager is
+// available synchronously in component onMounted hooks.
+// Without this, TokenDialog.onMounted sees getUserManager()
+// as null and never shows the OIDC login button.
+initOidc()
+  .catch(() => undefined)
+  .then(() => app.mount('#app'))
