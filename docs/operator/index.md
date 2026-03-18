@@ -18,8 +18,8 @@ namespace ACL management.
 ```bash
 git clone https://github.com/exhuma/docroot.git
 cd docroot
-cp deploy/dev/.env.example deploy/dev/.env
-# Edit deploy/dev/.env as needed
+cp deploy/compose/.env.example deploy/compose/.env
+# Edit deploy/compose/.env as needed
 docker compose -f deploy/compose/docker-compose.yml up
 ```
 
@@ -36,36 +36,150 @@ container.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DOCROOT_DATA_ROOT` | `/data` | Filesystem path for stored data |
-| `DOCROOT_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint URL. Required for JWT validation. Supports `file://` for local dev. |
-| `DOCROOT_OAUTH_AUDIENCE` | *(empty)* | Expected JWT audience. Disable with empty string. |
+| `DOCROOT_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint URL for JWT validation. Supports `file://` for local dev. |
+| `DOCROOT_OAUTH_AUDIENCE` | *(empty)* | Expected JWT audience. Empty disables audience validation. |
 | `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor name. Currently `keycloak` only. |
 | `DOCROOT_CORS_ORIGINS` | `*` | Comma-separated CORS origins, or `*` for any. |
 | `DOCROOT_ZIP_MAX_FILES` | `500` | Maximum files in an uploaded ZIP. |
 | `DOCROOT_ZIP_MAX_EXTRACTED_MB` | `500` | Maximum extracted ZIP size in MB. |
+| `DOCROOT_LOG_LEVEL` | `INFO` | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
+| `DOCROOT_COOKIE_SECURE` | `false` | Set `true` on HTTPS deployments. |
+| `DOCROOT_OIDC_ISSUER` | *(empty)* | OIDC issuer URL served to the browser UI. Empty disables the OIDC login button. |
+| `DOCROOT_OIDC_CLIENT_ID` | *(empty)* | OIDC **public** client ID for the browser authorization-code + PKCE flow. |
+
+---
+
+## Volumes
+
+Mount one external volume at `/data`. All namespace, project,
+and documentation data is stored there.
+
+```yaml
+volumes:
+  - /your/host/path:/data
+```
+
+Restart the containers at any time without data loss.
 
 ---
 
 ## OIDC / OAuth2 Configuration
 
-Docroot acts as an OAuth2 resource server. It validates JWT
-Bearer tokens but does not perform the login flow itself.
+Docroot uses two OIDC clients:
 
-1. Register Docroot as a resource server (audience) in your IDP.
-2. Set `DOCROOT_OAUTH_JWKS_URL` to the JWKS endpoint of your
-   IDP (e.g.
-   `https://accounts.example.com/.well-known/jwks.json`).
-3. Set `DOCROOT_OAUTH_AUDIENCE` to the audience value in your
-   tokens.
+1. **Confidential back-end client** — validates JWT Bearer tokens
+   using JWKS (resource-server behaviour, no redirect).
+2. **Public front-end client** — drives the browser
+   authorization-code + PKCE flow via `oidc-client-ts`.
 
-### Keycloak-specific notes
+### Back-end (resource server) setup
 
-The Keycloak extractor reads roles from:
+Set `DOCROOT_OAUTH_JWKS_URL` to the JWKS endpoint of your IDP
+and `DOCROOT_OAUTH_AUDIENCE` to the audience value in your
+tokens.
+
+### Front-end (public client) setup
+
+Set `DOCROOT_OIDC_ISSUER` to the OIDC issuer URL and
+`DOCROOT_OIDC_CLIENT_ID` to the public client ID registered in
+your IDP.  The front-end uses the authorization-code flow with
+PKCE; no client secret is required.  Register
+`https://<your-host>/oidc-callback` as the redirect URI.
+
+---
+
+## Keycloak Configuration
+
+### 1. Create a realm
+
+In the Keycloak admin console, create a realm (e.g. `docroot`).
+
+### 2. Create a confidential back-end client
+
+1. **Clients → Create client**
+2. Client ID: `docroot-api`
+3. Client authentication: **ON** (confidential)
+4. Service accounts: **ON** (for client-credentials uploads)
+5. Note the client secret from the **Credentials** tab.
+
+Configure the API container:
+
+```env
+DOCROOT_OAUTH_JWKS_URL=https://keycloak.example.com/realms/\
+docroot/protocol/openid-connect/certs
+DOCROOT_OAUTH_AUDIENCE=docroot-api
+```
+
+### 3. Create a public front-end client
+
+1. **Clients → Create client**
+2. Client ID: `docroot-ui`
+3. Client authentication: **OFF** (public)
+4. Valid redirect URIs:
+   `https://docroot.example.com/oidc-callback`
+5. Web origins: `https://docroot.example.com`
+
+Configure the API container:
+
+```env
+DOCROOT_OIDC_ISSUER=https://keycloak.example.com/realms/docroot
+DOCROOT_OIDC_CLIENT_ID=docroot-ui
+```
+
+### 4. Create roles and assign them
+
+1. Go to **Realm roles → Create role** (e.g. `docroot-editor`).
+2. Assign the role to users via **Users → Role mappings**.
+3. Reference the role name in `namespace.toml` ACL files.
+
+The Keycloak role extractor reads:
 
 - `realm_access.roles` — realm-level roles
 - `resource_access.<client_id>.roles` — client-level roles
 
-Assign roles in the Keycloak admin console and reference them
-in namespace ACL files.
+---
+
+## GitHub OAuth / OIDC
+
+GitHub supports OIDC for Actions but not for browser logins.
+For browser login, use GitHub as a social login provider via
+Keycloak's identity brokering:
+
+1. Register an OAuth App on GitHub
+   (*Settings → Developer settings → OAuth Apps*).
+2. Authorization callback URL:
+   `https://keycloak.example.com/realms/docroot/broker/\
+github/endpoint`
+3. In Keycloak, add an **Identity Provider** of type **GitHub**
+   and fill in the client ID and secret from step 1.
+
+---
+
+## Facebook Login
+
+1. Create an app at
+   [developers.facebook.com](https://developers.facebook.com).
+2. Add the **Facebook Login** product.
+3. Valid OAuth redirect URI:
+   `https://keycloak.example.com/realms/docroot/broker/\
+facebook/endpoint`
+4. In Keycloak, add an Identity Provider of type **Facebook**
+   with the App ID and App Secret.
+
+---
+
+## Microsoft / Entra ID (Azure AD)
+
+1. Register an application in the
+   [Azure portal](https://portal.azure.com) under
+   **Azure Active Directory → App registrations**.
+2. Add a redirect URI (Web):
+   `https://keycloak.example.com/realms/docroot/broker/\
+microsoft/endpoint`
+3. Note the **Application (client) ID** and create a client
+   secret.
+4. In Keycloak, add an Identity Provider of type
+   **Microsoft** with the client ID and secret.
 
 ---
 

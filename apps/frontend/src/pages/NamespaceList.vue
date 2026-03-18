@@ -2,6 +2,11 @@
   <v-app-bar>
     <v-toolbar-title>{{ t('namespaces') }}</v-toolbar-title>
     <v-spacer />
+    <v-btn
+      icon="mdi-help-circle-outline"
+      :title="t('userManual')"
+      :to="'/manual'"
+    />
     <v-select
       v-model="uiLocale"
       class="mr-2"
