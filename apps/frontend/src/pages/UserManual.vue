@@ -130,7 +130,8 @@ protocol/openid-connect/token \
 
 # 2. Upload documentation
 curl -X POST \
-  https://docroot.example.com/api/myns/myproject/upload \
+  https://docroot.example.com/api/namespaces/myns/\
+projects/myproject/upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@docs.zip" \
   -F "version=1.0.0" \
