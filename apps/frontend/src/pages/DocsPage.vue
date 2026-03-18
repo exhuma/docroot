@@ -18,18 +18,6 @@
       variant="tonal"
     >
       {{ t('devModeNotice') }}
-      <template #append>
-        <v-btn
-          color="info"
-          :href="iframeSrc"
-          rel="noopener"
-          size="small"
-          target="_blank"
-          variant="outlined"
-        >
-          {{ t('openDirectly') }}
-        </v-btn>
-      </template>
     </v-alert>
   </div>
 

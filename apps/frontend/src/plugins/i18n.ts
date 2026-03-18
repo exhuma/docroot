@@ -42,7 +42,6 @@ const messages = {
       'Documentation preview is not available in the'
       + ' dev server. nginx is required to serve static'
       + ' documentation files.',
-    openDirectly: 'Open directly',
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -85,8 +84,7 @@ const messages = {
     devModeNotice:
       'L\'aperçu de la documentation n\'est pas disponible'
       + ' en mode dev. nginx est requis pour servir les'
-      + ' fichiers statiques.',
-    openDirectly: 'Ouvrir directement',
+      + ' fichiers statiques.'
   },
   de: {
     namespaces: 'Namensräume',
@@ -130,7 +128,6 @@ const messages = {
       'Die Dokumentationsvorschau ist im Dev-Server'
       + ' nicht verfügbar. nginx wird benötigt, um'
       + ' statische Dateien zu liefern.',
-    openDirectly: 'Direkt öffnen',
   },
 }
 
