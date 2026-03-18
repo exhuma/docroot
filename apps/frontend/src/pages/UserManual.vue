@@ -3,7 +3,7 @@
     <v-btn icon="mdi-arrow-left" to="/" />
     <v-toolbar-title>{{ t('userManual') }}</v-toolbar-title>
     <v-spacer />
-    <TokenDialog />
+    <AuthBar />
   </v-app-bar>
 
   <v-container class="user-manual">
@@ -115,7 +115,7 @@
 
 <script setup lang="ts">
   import { useI18n } from 'vue-i18n'
-  import TokenDialog from '@/components/TokenDialog.vue'
+  import AuthBar from '@/components/AuthBar.vue'
 
   const { t } = useI18n()
 

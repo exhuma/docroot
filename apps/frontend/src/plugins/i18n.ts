@@ -21,8 +21,9 @@ const messages = {
     uploadError: 'Upload failed.',
     loginRequired: 'Login required for write operations.',
     authToken: 'Bearer token',
-    login: 'Set token',
-    logout: 'Clear token',
+    login: 'Login',
+    logout: 'Logout',
+    setToken: 'Set token',
     loginWithOidc: 'Login with OIDC',
     localeShown: 'Showing locale: {locale}',
     fallbackNotice:
@@ -121,8 +122,9 @@ const messages = {
     loginRequired:
       'Connexion requise pour les opérations d\'écriture.',
     authToken: 'Jeton Bearer',
-    login: 'Définir le jeton',
-    logout: 'Effacer le jeton',
+    login: 'Connexion',
+    logout: 'Déconnexion',
+    setToken: 'Définir le jeton',
     loginWithOidc: 'Connexion via OIDC',
     localeShown: 'Locale affichée: {locale}',
     fallbackNotice:
@@ -212,8 +214,9 @@ const messages = {
     loginRequired:
       'Anmeldung für Schreibvorgänge erforderlich.',
     authToken: 'Bearer-Token',
-    login: 'Token setzen',
-    logout: 'Token löschen',
+    login: 'Anmelden',
+    logout: 'Abmelden',
+    setToken: 'Token setzen',
     loginWithOidc: 'Mit OIDC anmelden',
     localeShown: 'Angezeigte Sprachversion: {locale}',
     fallbackNotice:

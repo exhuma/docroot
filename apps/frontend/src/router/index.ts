@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DocsPage from '@/pages/DocsPage.vue'
 import NamespaceList from '@/pages/NamespaceList.vue'
 import OidcCallback from '@/pages/OidcCallback.vue'
+import OidcSilent from '@/pages/OidcSilent.vue'
 import ProjectList from '@/pages/ProjectList.vue'
 import UserManual from '@/pages/UserManual.vue'
 import VersionList from '@/pages/VersionList.vue'
@@ -16,6 +17,10 @@ const router = createRouter({
     {
       path: '/oidc-callback',
       component: OidcCallback,
+    },
+    {
+      path: '/oidc-silent',
+      component: OidcSilent,
     },
     {
       path: '/manual',

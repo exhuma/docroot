@@ -16,7 +16,7 @@
       :label="t('language')"
       style="max-width: 120px"
     />
-    <TokenDialog />
+    <AuthBar />
   </v-app-bar>
 
   <v-container>
@@ -33,7 +33,7 @@
         v-for="ns in namespaces"
         :key="ns.name"
         link
-        :subtitle="ns.creator ? t('createdBy', { creator: ns.creator }) : undefined"
+        :subtitle="ns.creator ? t('createdBy', { creator: creatorLabel(ns.creator) }) : undefined"
         :title="ns.name"
         :to="`/${ns.name}`"
       >
@@ -48,7 +48,7 @@
             {{ t('publicRead') }}
           </v-chip>
           <v-btn
-            v-if="isAuthenticated() && ns.creator !== currentSubject()"
+            v-if="isAuthenticated() && ns.creator !== currentSub"
             density="compact"
             size="small"
             variant="text"
@@ -118,11 +118,16 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref, watch } from 'vue'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { api, type Namespace } from '@/api'
-  import { getSubject, isAuthenticated, token } from '@/auth'
-  import TokenDialog from '@/components/TokenDialog.vue'
+  import {
+    getDisplayName,
+    getSubject,
+    isAuthenticated,
+    token,
+  } from '@/auth'
+  import AuthBar from '@/components/AuthBar.vue'
 
   const { t, locale } = useI18n()
 
@@ -140,8 +145,23 @@
   const newName = ref('')
   const newPublicRead = ref(false)
 
-  function currentSubject (): string {
-    return getSubject() ?? ''
+  /** Current user's subject claim, computed reactively. */
+  const currentSub = computed(() => getSubject() ?? '')
+
+  /**
+   * Return a human-readable label for a namespace creator.
+   *
+   * When the stored ``sub`` matches the current user's subject the
+   * display name from the JWT (``name`` / ``preferred_username`` /
+   * ``email`` / ``sub``) is returned so the UI shows a friendly name
+   * rather than a raw identifier.  For other users the stored sub
+   * value is returned unchanged.
+   */
+  function creatorLabel (sub: string): string {
+    if (sub === currentSub.value) {
+      return getDisplayName() ?? sub
+    }
+    return sub
   }
 
   async function load () {
