@@ -84,7 +84,7 @@ const messages = {
     devModeNotice:
       'L\'aperçu de la documentation n\'est pas disponible'
       + ' en mode dev. nginx est requis pour servir les'
-      + ' fichiers statiques.'
+      + ' fichiers statiques.',
   },
   de: {
     namespaces: 'Namensräume',
