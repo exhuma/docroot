@@ -96,27 +96,27 @@
       <v-select
         v-model="selectedVersion"
         class="mb-3"
-        variant="solo"
         density="compact"
         hide-details
         :items="versionNames"
         :label="t('selectVersion')"
+        variant="solo"
         @update:model-value="onVersionChange"
       />
 
       <v-select
         v-model="selectedLocale"
         density="compact"
-        variant="solo"
         hide-details
         :items="availableLocales"
         :label="t('selectLocale')"
+        variant="solo"
         @update:model-value="onLocaleChange"
       />
       <v-btn
+        class="mt-4"
         color="primary"
         density="compact"
-        class="mt-4"
         :to="`/${namespace}/${project}`"
       >
         <v-icon left>mdi-arrow-left</v-icon>
