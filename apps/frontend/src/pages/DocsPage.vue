@@ -1,10 +1,37 @@
 <template>
-  <!-- Full-screen documentation iframe -->
+  <!-- Full-screen documentation iframe (compose/prod only) -->
   <iframe
-    v-if="iframeSrc"
+    v-if="iframeSrc && !isDev"
     class="docs-frame"
     :src="iframeSrc"
   />
+
+  <!--
+    Dev-server notice: static docs are served by nginx in the
+    compose stack. The vite dev server has no route for those
+    paths, so we show a direct link instead of a broken iframe.
+  -->
+  <div v-if="iframeSrc && isDev" class="docs-dev-notice">
+    <v-alert
+      class="docs-dev-notice__alert"
+      type="info"
+      variant="tonal"
+    >
+      {{ t('devModeNotice') }}
+      <template #append>
+        <v-btn
+          color="info"
+          :href="iframeSrc"
+          rel="noopener"
+          size="small"
+          target="_blank"
+          variant="outlined"
+        >
+          {{ t('openDirectly') }}
+        </v-btn>
+      </template>
+    </v-alert>
+  </div>
 
   <!-- Error shown floating when iframe cannot load -->
   <div v-if="error" class="docs-error-overlay">
@@ -21,10 +48,10 @@
   -->
   <v-card
     ref="panelEl"
-    :style="panelStyle"
     elevation="8"
     min-width="240"
     rounded="lg"
+    :style="panelStyle"
   >
     <!-- Toolbar acts as drag handle -->
     <v-toolbar
@@ -32,9 +59,9 @@
       color="primary"
       density="compact"
       role="button"
+      style="cursor: grab; user-select: none;"
       tabindex="0"
       :title="`${namespace}/${project}`"
-      style="cursor: grab; user-select: none;"
       @keydown="onPanelKeydown"
       @mousedown="startDrag"
     >
@@ -130,6 +157,7 @@
   const selectedLocale = ref(initLocale)
   const fallbackUsed = ref(false)
   const expanded = ref(true)
+  const isDev = import.meta.env.DEV
   // v-card is a component; access the root DOM element via .$el.
   const panelEl = ref<{ $el: HTMLElement } | null>(null)
 
@@ -320,6 +348,23 @@
     z-index: 10000;
     max-width: 600px;
     width: 90%;
+  }
+
+  /**
+   * Dev-server notice centred in the viewport, visible only
+   * when running under the vite dev server.
+   */
+  .docs-dev-notice {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 24px;
+  }
+
+  .docs-dev-notice__alert {
+    max-width: 600px;
+    width: 100%;
   }
 
   /** Toolbar cursor switches to grabbing while dragging. */

@@ -37,6 +37,11 @@ const messages = {
     createdBy: 'Created by: {creator}',
     takeOwnership: 'Take ownership',
     dragPanel: 'Drag to reposition panel',
+    devModeNotice:
+      'Documentation preview is not available in the'
+      + ' dev server. nginx is required to serve static'
+      + ' documentation files.',
+    openDirectly: 'Open directly',
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -75,6 +80,11 @@ const messages = {
     createdBy: 'Créé par : {creator}',
     takeOwnership: 'Prendre possession',
     dragPanel: 'Faire glisser pour repositionner',
+    devModeNotice:
+      'L\'aperçu de la documentation n\'est pas disponible'
+      + ' en mode dev. nginx est requis pour servir les'
+      + ' fichiers statiques.',
+    openDirectly: 'Ouvrir directement',
   },
   de: {
     namespaces: 'Namensräume',
@@ -113,6 +123,11 @@ const messages = {
     createdBy: 'Erstellt von: {creator}',
     takeOwnership: 'Eigentümer werden',
     dragPanel: 'Ziehen zum Verschieben',
+    devModeNotice:
+      'Die Dokumentationsvorschau ist im Dev-Server'
+      + ' nicht verfügbar. nginx wird benötigt, um'
+      + ' statische Dateien zu liefern.',
+    openDirectly: 'Direkt öffnen',
   },
 }
 
