@@ -38,7 +38,7 @@ container.
 | `DOCROOT_DATA_ROOT` | `/data` | Filesystem path for stored data |
 | `DOCROOT_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint URL for JWT validation. Supports `file://` for local dev. |
 | `DOCROOT_OAUTH_AUDIENCE` | *(empty)* | Expected JWT audience. Empty disables audience validation. |
-| `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor name. Currently `keycloak` only. |
+| `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor name. `keycloak` is the only extractor shipped in this release; the interface is designed for extension. |
 | `DOCROOT_CORS_ORIGINS` | `*` | Comma-separated CORS origins, or `*` for any. |
 | `DOCROOT_ZIP_MAX_FILES` | `500` | Maximum files in an uploaded ZIP. |
 | `DOCROOT_ZIP_MAX_EXTRACTED_MB` | `500` | Maximum extracted ZIP size in MB. |
@@ -100,6 +100,17 @@ DOCROOT_OIDC_CLIENT_ID=<your-public-client-id>
 Register `https://<your-host>/oidc-callback` as the allowed
 redirect URI at your IDP.  No client secret is required for the
 front-end client (PKCE only).
+
+### JWKS key rollover
+
+For HTTP JWKS URLs the backend caches signing keys in memory.
+When a token arrives with a `kid` not present in the cache
+the JWKS endpoint is fetched automatically, so standard IDP
+key rotation requires no operator intervention.
+
+For `file://` JWKS (local development only) keys are loaded
+once at process start. Restart the API container after
+replacing the key file.
 
 ---
 
@@ -176,6 +187,12 @@ be used directly without any intermediary.
 1. Under **Expose an API**, set the **Application ID URI**
    (e.g. `api://<client-id>`).
 2. This value becomes your `DOCROOT_OAUTH_AUDIENCE`.
+
+> **Warning — token version:** Entra ID issues v1 access
+> tokens by default. The configuration below targets
+> **v2 tokens only**. Open the app **Manifest** in the Azure
+> portal and set `"accessTokenAcceptedVersion": 2` before
+> applying it.
 
 ### 3. Configure Docroot
 
@@ -336,3 +353,36 @@ development setup. Use `task gen-token` to generate a test JWT:
 ```bash
 task gen-token -- --sub alice --roles editor
 ```
+
+---
+
+### Local Keycloak (dev compose override)
+
+A pre-configured Keycloak instance is available as a Compose
+override for end-to-end development without an external IDP.
+
+```bash
+docker compose \
+  -f deploy/compose/docker-compose.yml \
+  -f deploy/compose/docker-compose.dev.yml \
+  up
+```
+
+Both the browser and the API container reach Keycloak at
+`http://keycloak.127.0.0.1.nip.io:8080`. The `nip.io` DNS
+service resolves that hostname to `127.0.0.1`; an
+`extra_hosts` entry in the API container overrides it to the
+Docker host gateway so it reaches the published port 8080.
+
+Pre-loaded test accounts:
+
+| Username | Password | Role             |
+|----------|----------|------------------|
+| `alice`  | `alice`  | `docroot-editor` |
+| `bob`    | `bob`    | `docroot-reader` |
+
+Admin console:
+`http://keycloak.127.0.0.1.nip.io:8080/admin` (admin / admin)
+
+> **This setup is for local development only. Do not use it
+> in any internet-facing deployment.**

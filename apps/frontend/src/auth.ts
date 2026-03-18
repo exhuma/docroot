@@ -65,6 +65,12 @@ export async function initOidc (): Promise<UserManager | null> {
     const redirectUri = (
       `${window.location.origin}/oidc-callback`
     )
+    // TODO: implement silent token renewal.
+    // oidc-client-ts ships with automaticSilentRenew=true by
+    // default, but it requires a dedicated route that calls
+    // signinSilentCallback(). Until that route exists, silent
+    // renewal fails silently and the user is redirected to the
+    // IDP when their access token expires.
     const settings: UserManagerSettings = {
       authority: cfg.issuer,
       client_id: cfg.client_id,
