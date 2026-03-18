@@ -15,6 +15,7 @@ from functools import lru_cache
 import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWK, PyJWKClient
+from pathlib import Path
 
 from app.logging import get_logger
 from app.settings import Settings, get_settings
@@ -48,7 +49,7 @@ def _get_jwks_client(
         method.
     """
     if jwks_url.startswith("file://"):
-        return _FileJWKSClient(jwks_url[len("file://"):])
+        return _FileJWKSClient(Path(jwks_url[len("file://"):]))
     return PyJWKClient(jwks_url, cache_keys=True)
 
 
@@ -58,12 +59,12 @@ class _FileJWKSClient:
     :param path: Filesystem path to the JWKS JSON file.
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         """Initialise and load keys from *path*.
 
         :param path: Path to the JWKS JSON file.
         """
-        with open(path) as fh:
+        with path.absolute().open() as fh:
             data: dict[str, object] = json.load(fh)
         keys_raw = data.get("keys", [])
         if not isinstance(keys_raw, list):
