@@ -8,7 +8,7 @@
 import { createApp } from 'vue'
 
 // Auth
-import { initOidc } from '@/auth'
+import { initOidc, trySigninSilent } from '@/auth'
 
 // Plugins
 import { registerPlugins } from '@/plugins'
@@ -23,10 +23,17 @@ const app = createApp(App)
 
 registerPlugins(app)
 
-// Initialise OIDC before mounting so the UserManager is
+// Initialise the OIDC UserManager before mounting so that it is
 // available synchronously in component onMounted hooks.
-// Without this, TokenDialog.onMounted sees getUserManager()
-// as null and never shows the OIDC login button.
+//
+// The silent-renew iframe (``/oidc-silent``) also runs this file,
+// so we must NOT call trySigninSilent() there — doing so would
+// spawn another iframe, causing an infinite reload loop.
 initOidc()
   .catch(() => undefined)
-  .then(() => app.mount('#app'))
+  .then(async () => {
+    if (window.location.pathname !== '/oidc-silent') {
+      await trySigninSilent()
+    }
+    app.mount('#app')
+  })

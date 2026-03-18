@@ -104,9 +104,10 @@ function applyToken (t: string | null): void {
 /**
  * Initialise the OIDC UserManager from server-provided config.
  *
- * Called once during application start-up.  If OIDC is configured
- * a silent login is attempted first so that users with an existing
- * SSO session are logged in transparently without a redirect.
+ * Called once during application start-up (and again inside the
+ * silent-renew iframe).  Sets up the UserManager and event handlers
+ * but does **not** attempt a silent login — call
+ * ``trySigninSilent()`` separately from the main page context.
  *
  * @returns Resolved UserManager, or null when OIDC is disabled.
  */
@@ -149,19 +150,31 @@ export async function initOidc (): Promise<UserManager | null> {
       currentUser.value = null
     })
 
-    // Attempt a transparent silent login.  This succeeds when the
-    // user already has a live SSO session at the identity provider
-    // and avoids forcing a full redirect on every page load.
-    // State is updated via the ``addUserLoaded`` event handler.
-    try {
-      await _userManager.signinSilent()
-    } catch {
-      // No existing SSO session — user must log in explicitly.
-    }
-
     return _userManager
   } catch {
     return null
+  }
+}
+
+/**
+ * Attempt a transparent silent login using an existing SSO session.
+ *
+ * Must be called **only from the main page context** — never from
+ * inside the silent-renew iframe (``/oidc-silent``).  Calling it
+ * inside the iframe would spawn a new iframe, creating an infinite
+ * loop.  ``initOidc()`` must have been called first.
+ *
+ * State is updated via the ``addUserLoaded`` event handler when
+ * the silent login succeeds.
+ */
+export async function trySigninSilent (): Promise<void> {
+  if (!_userManager) {
+    return
+  }
+  try {
+    await _userManager.signinSilent()
+  } catch {
+    // No existing SSO session — user must log in explicitly.
   }
 }
 
