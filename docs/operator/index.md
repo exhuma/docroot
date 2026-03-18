@@ -65,30 +65,45 @@ Restart the containers at any time without data loss.
 
 ## OIDC / OAuth2 Configuration
 
-Docroot uses two OIDC clients:
+Docroot works with **any OIDC-compliant identity provider**.
+It does not depend on Keycloak specifically.  The architecture
+uses two clients:
 
 1. **Confidential back-end client** — validates JWT Bearer tokens
-   using JWKS (resource-server behaviour, no redirect).
+   using JWKS (resource-server behaviour, no user redirect).
 2. **Public front-end client** — drives the browser
    authorization-code + PKCE flow via `oidc-client-ts`.
 
-### Back-end (resource server) setup
+### General setup pattern
 
-Set `DOCROOT_OAUTH_JWKS_URL` to the JWKS endpoint of your IDP
-and `DOCROOT_OAUTH_AUDIENCE` to the audience value in your
-tokens.
+For every OIDC-compliant IDP, apply the same two-step
+configuration:
 
-### Front-end (public client) setup
+**Step 1 — back-end (resource server):**
 
-Set `DOCROOT_OIDC_ISSUER` to the OIDC issuer URL and
-`DOCROOT_OIDC_CLIENT_ID` to the public client ID registered in
-your IDP.  The front-end uses the authorization-code flow with
-PKCE; no client secret is required.  Register
-`https://<your-host>/oidc-callback` as the redirect URI.
+```env
+# Point to the IDP's JWKS endpoint
+DOCROOT_OAUTH_JWKS_URL=https://<idp>/.well-known/jwks.json
+# Audience value expected in every incoming JWT
+DOCROOT_OAUTH_AUDIENCE=<your-api-audience>
+```
+
+**Step 2 — front-end (public client):**
+
+```env
+# OIDC issuer URL (same as the `iss` claim in your tokens)
+DOCROOT_OIDC_ISSUER=https://<idp>
+# Public client ID registered at the IDP
+DOCROOT_OIDC_CLIENT_ID=<your-public-client-id>
+```
+
+Register `https://<your-host>/oidc-callback` as the allowed
+redirect URI at your IDP.  No client secret is required for the
+front-end client (PKCE only).
 
 ---
 
-## Keycloak Configuration
+## Keycloak (self-hosted)
 
 ### 1. Create a realm
 
@@ -100,7 +115,6 @@ In the Keycloak admin console, create a realm (e.g. `docroot`).
 2. Client ID: `docroot-api`
 3. Client authentication: **ON** (confidential)
 4. Service accounts: **ON** (for client-credentials uploads)
-5. Note the client secret from the **Credentials** tab.
 
 Configure the API container:
 
@@ -139,47 +153,98 @@ The Keycloak role extractor reads:
 
 ---
 
-## GitHub OAuth / OIDC
-
-GitHub supports OIDC for Actions but not for browser logins.
-For browser login, use GitHub as a social login provider via
-Keycloak's identity brokering:
-
-1. Register an OAuth App on GitHub
-   (*Settings → Developer settings → OAuth Apps*).
-2. Authorization callback URL:
-   `https://keycloak.example.com/realms/docroot/broker/\
-github/endpoint`
-3. In Keycloak, add an **Identity Provider** of type **GitHub**
-   and fill in the client ID and secret from step 1.
-
----
-
-## Facebook Login
-
-1. Create an app at
-   [developers.facebook.com](https://developers.facebook.com).
-2. Add the **Facebook Login** product.
-3. Valid OAuth redirect URI:
-   `https://keycloak.example.com/realms/docroot/broker/\
-facebook/endpoint`
-4. In Keycloak, add an Identity Provider of type **Facebook**
-   with the App ID and App Secret.
-
----
-
 ## Microsoft / Entra ID (Azure AD)
 
-1. Register an application in the
-   [Azure portal](https://portal.azure.com) under
-   **Azure Active Directory → App registrations**.
-2. Add a redirect URI (Web):
-   `https://keycloak.example.com/realms/docroot/broker/\
-microsoft/endpoint`
-3. Note the **Application (client) ID** and create a client
-   secret.
-4. In Keycloak, add an Identity Provider of type
-   **Microsoft** with the client ID and secret.
+Microsoft Entra ID is a fully OIDC-compliant provider and can
+be used directly without any intermediary.
+
+### 1. Register an application
+
+1. In the [Azure portal](https://portal.azure.com), go to
+   **Azure Active Directory → App registrations →
+   New registration**.
+2. Supported account types: choose the appropriate scope
+   (single tenant, multi-tenant, etc.).
+3. Redirect URI: **Single-page application (SPA)**
+   `https://docroot.example.com/oidc-callback`
+4. Note the **Application (client) ID** (this is your
+   `client_id`).
+5. Note the **Directory (tenant) ID**.
+
+### 2. Expose an API (back-end audience)
+
+1. Under **Expose an API**, set the **Application ID URI**
+   (e.g. `api://<client-id>`).
+2. This value becomes your `DOCROOT_OAUTH_AUDIENCE`.
+
+### 3. Configure Docroot
+
+```env
+DOCROOT_OAUTH_JWKS_URL=https://login.microsoftonline.com/\
+<tenant-id>/discovery/v2.0/keys
+DOCROOT_OAUTH_AUDIENCE=api://<client-id>
+DOCROOT_OIDC_ISSUER=https://login.microsoftonline.com/\
+<tenant-id>/v2.0
+DOCROOT_OIDC_CLIENT_ID=<client-id>
+```
+
+---
+
+## Google
+
+Google Identity is fully OIDC-compliant and can be used
+directly.
+
+### 1. Create an OAuth2 client
+
+1. In the [Google Cloud Console](https://console.cloud.google.com),
+   go to **APIs & Services → Credentials → Create credentials
+   → OAuth client ID**.
+2. Application type: **Web application**.
+3. Add an authorised redirect URI:
+   `https://docroot.example.com/oidc-callback`
+4. Note the **Client ID** (no secret needed; Docroot uses PKCE).
+
+### 2. Configure Docroot
+
+```env
+DOCROOT_OAUTH_JWKS_URL=\
+https://www.googleapis.com/oauth2/v3/certs
+DOCROOT_OAUTH_AUDIENCE=<google-client-id>
+DOCROOT_OIDC_ISSUER=https://accounts.google.com
+DOCROOT_OIDC_CLIENT_ID=<google-client-id>
+```
+
+---
+
+## GitHub
+
+> **Note:** GitHub does **not** provide a standard OIDC
+> authorization endpoint for browser user authentication.
+> GitHub's OIDC provider (`token.actions.githubusercontent.com`)
+> is intended for GitHub Actions workload identity only and
+> cannot be used for interactive user logins via `oidc-client-ts`.
+>
+> To use GitHub as a login provider for Docroot, run an
+> OIDC-compliant proxy in front of it.  Popular options include
+> [Keycloak](https://www.keycloak.org/) (identity brokering),
+> [Dex](https://dexidp.io/), or [Zitadel](https://zitadel.com/).
+> Configure that proxy as the Docroot OIDC issuer.
+
+---
+
+## Facebook
+
+> **Note:** Facebook Login uses OAuth 2.0 but its user access
+> tokens are **not** JWTs and Facebook does not expose a
+> standards-compliant OIDC discovery document suitable for
+> browser authorization-code + PKCE flows with
+> `oidc-client-ts`.
+>
+> To use Facebook as a login provider for Docroot, run an
+> OIDC-compliant proxy in front of it (e.g. Keycloak, Dex, or
+> Zitadel with Facebook federation enabled).  Configure that
+> proxy as the Docroot OIDC issuer.
 
 ---
 
