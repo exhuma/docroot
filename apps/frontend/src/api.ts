@@ -214,4 +214,27 @@ export const api = {
     )
     await handleResponse(res)
   },
+
+  /**
+   * Exchange a bearer token for an HttpOnly session cookie.
+   * The cookie will be attached by the browser to all subsequent
+   * same-origin requests, including iframe navigations.
+   */
+  async createSession (token: string): Promise<void> {
+    const res = await fetch(`${BASE}/auth/session`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    await handleResponse(res)
+  },
+
+  /** Clear the HttpOnly session cookie server-side. */
+  async deleteSession (): Promise<void> {
+    const res = await fetch(`${BASE}/auth/session`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    })
+    await handleResponse(res)
+  },
 }

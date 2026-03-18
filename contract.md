@@ -325,10 +325,22 @@ Public route:
 
 nginx responsibilities:
 
-* Serve static files from `/data`
-* Rate limit upload endpoints
-* Enforce max body size
-* Optional sub_filter rewriting (feature toggle via config)
+* Serve static files from `/data` after authorization is
+  confirmed via `auth_request`.
+* Delegate every static-file request to `GET /api/auth`
+  (FastAPI) before serving.  Access is denied if FastAPI
+  returns 401 or 403.
+* Rate limit upload endpoints.
+* Enforce max body size.
+* Optional sub_filter rewriting (feature toggle via config).
+
+FastAPI responsibilities:
+
+* Expose `GET /api/auth` as the nginx `auth_request` gate.
+* Extract the namespace from the ``X-Original-URI`` header
+  and evaluate the namespace ACL.
+* Return 200 (allow), 401 (unauthenticated), or 403
+  (forbidden).
 
 FastAPI must not serve large static files directly.
 
@@ -449,14 +461,19 @@ System is complete when:
 * Version+locale artifacts are immutable.
 * Latest symlink works.
 * Static hosting works under prefixed locale-aware route.
-* ACL enforcement works.
+* ACL enforcement works for both API and static file routes.
+* Static documentation requests are gated by nginx
+  ``auth_request`` delegating to ``GET /api/auth``.
 * Public namespaces work without JWT.
-* Locale-aware resolution and fallback work (requested -> `en` -> any -> 404).
+* Locale-aware resolution and fallback work
+  (requested -> `en` -> any -> 404).
 * Missing locale is shown gently in UI when fallback is used.
 * Invalid uploads are rejected safely.
-* System runs as a multi-container stack with one process per container.
+* System runs as a multi-container stack with one process per
+  container.
 * Restart does not lose data.
-* Multiple versions share files via hardlinks (verified by inode).
+* Multiple versions share files via hardlinks (verified by
+  inode).
 
 ---
 

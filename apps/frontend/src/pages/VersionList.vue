@@ -34,6 +34,7 @@
               v-if="ver.is_latest"
               class="ml-2"
               color="green"
+              label
               size="small"
             >
               {{ t('latest') }}
@@ -44,6 +45,7 @@
               v-for="loc in ver.locales"
               :key="loc"
               class="mr-1"
+              label
               size="small"
             >
               {{ loc }}
@@ -57,6 +59,7 @@
               :items="ver.locales"
               :label="t('selectLocale')"
               style="max-width: 120px"
+              variant="solo"
             />
             <v-btn
               color="primary"

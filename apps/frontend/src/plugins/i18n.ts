@@ -27,6 +27,7 @@ const messages = {
     fallbackNotice:
       'Requested locale not available. Showing: {locale}',
     back: 'Back',
+    cancel: 'Cancel',
     selectVersion: 'Select version',
     selectLocale: 'Select locale',
     language: 'Language',
@@ -36,6 +37,11 @@ const messages = {
     publicRead: 'Public read',
     createdBy: 'Created by: {creator}',
     takeOwnership: 'Take ownership',
+    dragPanel: 'Drag to reposition panel',
+    devModeNotice:
+      'Documentation preview is not available in the'
+      + ' dev server. nginx is required to serve static'
+      + ' documentation files.',
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -64,6 +70,7 @@ const messages = {
     fallbackNotice:
       'Locale demandée non disponible. Affichage: {locale}',
     back: 'Retour',
+    cancel: 'Annuler',
     selectVersion: 'Sélectionner la version',
     selectLocale: 'Sélectionner la locale',
     language: 'Langue',
@@ -73,6 +80,11 @@ const messages = {
     publicRead: 'Lecture publique',
     createdBy: 'Créé par : {creator}',
     takeOwnership: 'Prendre possession',
+    dragPanel: 'Faire glisser pour repositionner',
+    devModeNotice:
+      'L\'aperçu de la documentation n\'est pas disponible'
+      + ' en mode dev. nginx est requis pour servir les'
+      + ' fichiers statiques.',
   },
   de: {
     namespaces: 'Namensräume',
@@ -101,6 +113,7 @@ const messages = {
     fallbackNotice:
       'Angefragte Sprachversion nicht verfügbar. Anzeige: {locale}',
     back: 'Zurück',
+    cancel: 'Abbrechen',
     selectVersion: 'Version auswählen',
     selectLocale: 'Sprachversion auswählen',
     language: 'Sprache',
@@ -110,6 +123,11 @@ const messages = {
     publicRead: 'Öffentlich lesbar',
     createdBy: 'Erstellt von: {creator}',
     takeOwnership: 'Eigentümer werden',
+    dragPanel: 'Ziehen zum Verschieben',
+    devModeNotice:
+      'Die Dokumentationsvorschau ist im Dev-Server'
+      + ' nicht verfügbar. nginx wird benötigt, um'
+      + ' statische Dateien zu liefern.',
   },
 }
 

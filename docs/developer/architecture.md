@@ -47,9 +47,40 @@ This repository is a monorepo with separate runtime services.
 - Docs are rendered by iframe against nginx static routes.
 - Version/locale selection behavior must follow API resolution rules.
 
+## nginx Authorization Gate
+
+Static documentation requests must not bypass access control.
+The flow is:
+
+1. Browser requests `/{ns}/{project}/{version}/{locale}/...`.
+2. nginx matches the static-docs location and invokes
+   `auth_request /internal/auth`.
+3. nginx proxies a subrequest to `GET /api/auth` on FastAPI.
+   The subrequest inherits all incoming headers (including
+   `Authorization` when present) and cookies (including the
+   `session` cookie set by `POST /api/auth/session`) by default.
+   nginx also sets `X-Original-URI` to the original request path.
+4. FastAPI extracts the namespace from `X-Original-URI` and
+   resolves credentials: `Authorization` header first, then the
+   `session` cookie, then unauthenticated. The namespace ACL is
+   evaluated and FastAPI returns 200, 401, or 403.
+5. If 200, nginx serves the static file from `/data`.
+   Otherwise nginx returns the error status to the browser.
+
+The `session` cookie path is necessary because the SPA renders
+docs inside a `<iframe :src="...">`. Browser iframe navigations
+cannot carry custom `Authorization` headers; the cookie is
+attached automatically instead. See the *Browser Token Storage —
+Two-Store Design* section in `security.md` for full details.
+
+The `/internal/auth` location is declared `internal` in nginx
+and is unreachable by external clients.
+
 ## Prohibited Architectural Drift
 
 - No direct filesystem writes in API handlers.
 - No bypass of resolver for `latest` and locale fallbacks.
 - No database, ORM, queue, or background-worker introduction in v1.
 - No upstream/downstream split assumptions in repository design.
+- No static documentation served by nginx without passing
+  through the FastAPI `auth_request` gate.

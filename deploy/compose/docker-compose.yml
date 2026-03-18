@@ -5,13 +5,14 @@ services:
     build:
       context: ../../apps/backend
     environment:
-      - DATA_ROOT=/data
-      - OAUTH_JWKS_URL=${OAUTH_JWKS_URL}
-      - OAUTH_AUDIENCE=${OAUTH_AUDIENCE}
-      - OAUTH_ROLE_EXTRACTOR=${OAUTH_ROLE_EXTRACTOR:-keycloak}
-      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - DOCROOT_DATA_ROOT=/data
+      - DOCROOT_OAUTH_JWKS_URL=${DOCROOT_OAUTH_JWKS_URL}
+      - DOCROOT_OAUTH_AUDIENCE=${DOCROOT_OAUTH_AUDIENCE}
+      - DOCROOT_OAUTH_ROLE_EXTRACTOR=${DOCROOT_OAUTH_ROLE_EXTRACTOR:-keycloak}
+      - DOCROOT_CORS_ORIGINS=${DOCROOT_CORS_ORIGINS:-*}
     volumes:
       - data:/data
+      - ../dev/jwks.json:/jwks.json:ro
     restart: unless-stopped
 
   nginx:

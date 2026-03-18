@@ -36,7 +36,7 @@
       <v-card-actions>
         <v-spacer />
         <v-btn @click="emit('update:modelValue', false)">
-          {{ t('back') }}
+          {{ t('cancel') }}
         </v-btn>
         <v-btn
           color="primary"
@@ -72,8 +72,8 @@
 
   const file = ref<File | null>(null)
   const versionName = ref('')
-  const localeName = ref('')
-  const isLatest = ref(false)
+  const localeName = ref('en')
+  const isLatest = ref(true)
   const loading = ref(false)
   const errorMsg = ref<string | null>(null)
   const successMsg = ref<string | null>(null)

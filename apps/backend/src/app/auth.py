@@ -205,7 +205,9 @@ async def get_optional_auth(
 ) -> AuthContext | None:
     """FastAPI dependency: optionally authenticate the request.
 
-    Returns ``None`` if no ``Authorization`` header is present.
+    Checks the ``Authorization`` header first.  When absent, falls
+    back to the ``docroot_token`` cookie so that iframe navigation
+    (which cannot attach custom headers) is also authenticated.
     Raises 401 if a token is present but invalid.
 
     :param request: Incoming HTTP request.
@@ -213,19 +215,28 @@ async def get_optional_auth(
     :returns: :class:`AuthContext` or ``None``.
     """
     auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        return None
-    parts = auth_header.split(" ", 1)
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        _log.warning(
-            "Malformed Authorization header from %s",
+    if auth_header:
+        parts = auth_header.split(" ", 1)
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            _log.warning(
+                "Malformed Authorization header from %s",
+                request.client.host if request.client else "unknown",
+            )
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid Authorization header format",
+            )
+        return validate_token(parts[1], settings)
+
+    session_token = request.cookies.get("session")
+    if session_token:
+        _log.debug(
+            "Using session cookie for auth_request from %s",
             request.client.host if request.client else "unknown",
         )
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid Authorization header format",
-        )
-    return validate_token(parts[1], settings)
+        return validate_token(session_token, settings)
+
+    return None
 
 
 async def get_auth(
