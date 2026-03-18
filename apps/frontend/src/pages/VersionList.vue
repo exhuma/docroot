@@ -35,6 +35,7 @@
               class="ml-2"
               color="green"
               size="small"
+              label
             >
               {{ t('latest') }}
             </v-chip>
@@ -45,6 +46,7 @@
               :key="loc"
               class="mr-1"
               size="small"
+              label
             >
               {{ loc }}
             </v-chip>
@@ -54,6 +56,7 @@
               v-model="selectedLocale[ver.name]"
               density="compact"
               hide-details
+              variant="solo"
               :items="ver.locales"
               :label="t('selectLocale')"
               style="max-width: 120px"

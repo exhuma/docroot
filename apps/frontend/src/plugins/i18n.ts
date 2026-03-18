@@ -27,6 +27,7 @@ const messages = {
     fallbackNotice:
       'Requested locale not available. Showing: {locale}',
     back: 'Back',
+    cancel: 'Cancel',
     selectVersion: 'Select version',
     selectLocale: 'Select locale',
     language: 'Language',
@@ -70,6 +71,7 @@ const messages = {
     fallbackNotice:
       'Locale demandée non disponible. Affichage: {locale}',
     back: 'Retour',
+    cancel: 'Annuler',
     selectVersion: 'Sélectionner la version',
     selectLocale: 'Sélectionner la locale',
     language: 'Langue',
@@ -113,6 +115,7 @@ const messages = {
     fallbackNotice:
       'Angefragte Sprachversion nicht verfügbar. Anzeige: {locale}',
     back: 'Zurück',
+    cancel: 'Abbrechen',
     selectVersion: 'Version auswählen',
     selectLocale: 'Sprachversion auswählen',
     language: 'Sprache',

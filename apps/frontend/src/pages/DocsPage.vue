@@ -50,7 +50,7 @@
     ref="panelEl"
     elevation="8"
     min-width="240"
-    rounded="lg"
+    rounded="sm"
     :style="panelStyle"
   >
     <!-- Toolbar acts as drag handle -->
@@ -65,9 +65,6 @@
       @keydown="onPanelKeydown"
       @mousedown="startDrag"
     >
-      <v-toolbar-title class="text-body-2 font-weight-medium">
-        {{ namespace }}/{{ project }}
-      </v-toolbar-title>
       <template #append>
         <v-btn
           color="white"
@@ -79,13 +76,6 @@
           "
           variant="text"
           @click.stop="expanded = !expanded"
-        />
-        <v-btn
-          color="white"
-          density="compact"
-          icon="mdi-arrow-left"
-          :to="`/${namespace}/${project}`"
-          variant="text"
         />
       </template>
     </v-toolbar>
@@ -106,6 +96,7 @@
       <v-select
         v-model="selectedVersion"
         class="mb-3"
+        variant="solo"
         density="compact"
         hide-details
         :items="versionNames"
@@ -116,11 +107,21 @@
       <v-select
         v-model="selectedLocale"
         density="compact"
+        variant="solo"
         hide-details
         :items="availableLocales"
         :label="t('selectLocale')"
         @update:model-value="onLocaleChange"
       />
+      <v-btn
+        color="primary"
+        density="compact"
+        class="mt-4"
+        :to="`/${namespace}/${project}`"
+      >
+        <v-icon left>mdi-arrow-left</v-icon>
+        {{ $t('back') }}
+      </v-btn>
     </v-card-text>
   </v-card>
 </template>
