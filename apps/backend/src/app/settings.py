@@ -32,6 +32,10 @@ class Settings(BaseSettings):
         Empty string disables OIDC login button.
     :param oidc_client_id: OIDC public client ID used by the
         frontend for the authorization-code + PKCE flow.
+    :param oauth_ca_bundle: Path to a PEM CA certificate or bundle
+        used to verify the JWKS endpoint's TLS certificate.  Set
+        this when the IDP is behind an internal or self-signed CA.
+        Leave empty to use the system default trust store.
     """
 
     model_config = SettingsConfigDict(
@@ -51,6 +55,7 @@ class Settings(BaseSettings):
     cookie_secure: bool = Field(default=False)
     oidc_issuer: str = Field(default="")
     oidc_client_id: str = Field(default="")
+    oauth_ca_bundle: str = Field(default="")
 
 
 @lru_cache(maxsize=1)

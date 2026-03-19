@@ -11,7 +11,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from functools import lru_cache
+from typing import Any
 
+import httpx
 import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWK, PyJWKClient
@@ -40,17 +42,68 @@ class AuthContext:
 @lru_cache(maxsize=1)
 def _get_jwks_client(
     jwks_url: str,
+    ca_bundle: str = "",
 ) -> PyJWKClient | _FileJWKSClient:
     """Return a cached JWKS client for the given URL.
 
     :param jwks_url: JWKS endpoint URL. ``file://`` prefix is
         supported for local development.
+    :param ca_bundle: Path to a PEM CA certificate or bundle to use
+        for TLS verification.  When empty the system default trust
+        store is used.  Has no effect for ``file://`` URLs.
     :returns: A JWKS client with ``get_signing_key_from_jwt``
         method.
     """
     if jwks_url.startswith("file://"):
         return _FileJWKSClient(Path(jwks_url[len("file://"):]))
+    if ca_bundle:
+        return _HttpsJWKSClient(jwks_url, ca_bundle=ca_bundle, cache_keys=True)
     return PyJWKClient(jwks_url, cache_keys=True)
+
+
+class _HttpsJWKSClient(PyJWKClient):
+    """PyJWKClient variant that fetches JWKS via httpx.
+
+    Allows specifying a custom CA bundle for environments where the
+    IDP is served with an internal or self-signed certificate.
+
+    :param uri: JWKS endpoint URL.
+    :param ca_bundle: Path to a PEM CA certificate or bundle file.
+    """
+
+    def __init__(
+        self,
+        uri: str,
+        ca_bundle: str,
+        **kwargs: Any,
+    ) -> None:
+        """Initialise with a custom CA bundle.
+
+        :param uri: JWKS endpoint URL.
+        :param ca_bundle: Path to a CA certificate or bundle file.
+        :param kwargs: Forwarded to :class:`jwt.PyJWKClient`.
+        """
+        super().__init__(uri, **kwargs)
+        self._ca_bundle = ca_bundle
+
+    def fetch_data(self) -> Any:
+        """Fetch the JWKS JSON using httpx with the custom CA bundle.
+
+        :returns: Parsed JWKS JSON dict.
+        :raises jwt.PyJWKClientConnectionError: On any HTTP error.
+        """
+        try:
+            with httpx.Client(verify=self._ca_bundle) as client:
+                response = client.get(
+                    self.uri,
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPError as exc:
+            raise jwt.PyJWKClientConnectionError(
+                f"Failed to fetch JWKS from {self.uri}: {exc}"
+            ) from exc
 
 
 class _FileJWKSClient:
@@ -128,7 +181,7 @@ def validate_token(
     :returns: Validated :class:`AuthContext`.
     :raises HTTPException: 401 on any validation failure.
     """
-    client = _get_jwks_client(settings.oauth_jwks_url)
+    client = _get_jwks_client(settings.oauth_jwks_url, settings.oauth_ca_bundle)
     try:
         signing_key = client.get_signing_key_from_jwt(token)
     except jwt.exceptions.PyJWKClientError as exc:
