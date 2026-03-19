@@ -1,7 +1,23 @@
-FROM python:3.12-slim
+FROM python:3.14-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Never let uv download a managed Python binary; always use the
+# system Python from the base image.  This prevents the
+# "Could not find platform independent libraries" error in k8s
+# environments where downloaded binaries may not execute.
+ENV UV_PYTHON_DOWNLOADS=never
 WORKDIR /app
 COPY pyproject.toml .
-RUN uv sync --no-dev
+# Install third-party dependencies first (src/ not yet present).
+# --no-install-project skips the editable/wheel install of the
+# project package so that this layer can be cached independently
+# of source changes.
+RUN uv sync --no-dev --no-install-project
+# Copy the application source, then install the project package
+# into the same venv.  Two-step pattern keeps the dependency
+# layer cached when only application code changes.
 COPY src/ src/
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN uv sync --no-dev
+# Invoke uvicorn from the project venv directly to avoid uv
+# requiring a writable cache directory at container start-up
+# (relevant for non-privileged k8s pods with a read-only rootfs).
+CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

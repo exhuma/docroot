@@ -1,0 +1,86 @@
+{
+  "realm": "docroot",
+  "enabled": true,
+  "displayName": "Docroot",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      {"name": "docroot-editor", "composite": false},
+      {"name": "docroot-reader", "composite": false}
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "docroot-api",
+      "name": "Docroot API",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "docroot-ui",
+      "name": "Docroot UI",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost/*",
+        "http://*.nip.io/*"
+      ],
+      "webOrigins": ["*"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "docroot-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "docroot-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "alice@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "temporary": false,
+          "secretData": "{\"value\":\"Pw8W6f4a9skq0uozHmeBFu8MFP/nt5pwwLGhFBUqoFA=\",\"salt\":\"AQIDBAUGBwgJCgsMDQ4PEA==\",\"additionalParameters\":{}}",
+          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+        }
+      ],
+      "realmRoles": ["docroot-editor"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "bob@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "temporary": false,
+          "secretData": "{\"value\":\"Arj/vWDdbRDAwsJbsBdFqIezBFfh6wLIjTVp2rZ5ydg=\",\"salt\":\"ERITFBUWFxgZGhscHR4fIA==\",\"additionalParameters\":{}}",
+          "credentialData": "{\"hashIterations\":27500,\"algorithm\":\"pbkdf2-sha256\",\"additionalParameters\":{}}"
+        }
+      ],
+      "realmRoles": ["docroot-reader"]
+    }
+  ]
+}

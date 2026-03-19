@@ -1,79 +1,122 @@
 # User Guide
 
-This guide covers how to browse and upload documentation using
-the Docroot UI and REST API.
-
----
-
-## Browsing Documentation
-
-Open the application in a browser. The home page lists all
-namespaces you have access to. Select a namespace to see its
-projects, then select a project to see available versions.
-
-Select a version and a locale to open the documentation in the
-embedded viewer. If the exact locale you requested is unavailable,
-Docroot will automatically fall back to English (`en`), then to
-any available locale. A notice is shown when a fallback is used.
+```{include} ../../apps/frontend/src/assets/content/intro.en.md
+```
 
 ---
 
 ## Authentication
 
-Protected operations (creating namespaces or projects, uploading
-versions) require a Bearer token issued by the configured OIDC
-provider.
+Protected operations (creating namespaces, uploading versions)
+require a Bearer token.
 
-1. Click the **Login** button in the top-right corner of any page.
-2. Paste your Bearer token.
-3. Click **Login** to store the token for the current session.
+### OIDC login
 
-The token is stored in the browser's `localStorage` and persists
-across page refreshes.
+When OIDC is configured, a **Login** button is visible in the
+toolbar.  Click it to be redirected to the identity provider.
+After authenticating you are redirected back and logged in
+automatically.  Your display name and avatar appear in the
+toolbar.  Click **Logout** to end the session.
 
-To log out, click the key icon and choose **Logout**.
+Silent refresh runs in the background; you will not be
+interrupted during normal use.  If the session expires the UI
+resets to the unauthenticated state automatically.
+
+### Manual token (development)
+
+Click the **Set token** button (visible only in development
+builds when OIDC is also enabled, or always when OIDC is
+disabled), paste a Bearer token, and click **Set token**.
 
 ---
 
-## Uploading Documentation
+## Automated uploads (CI/CD)
 
-Navigate to a project's version list, then click **Upload**
-(visible only when authenticated with write access).
+Use the
+[OAuth 2.0 client credentials grant](https://oauth.net/2/grant-types/client-credentials/)
+to obtain a token without user interaction.
 
-Fill in:
+### 1. Obtain a token
 
-- **Version** — version string for the upload
-  (e.g. `1.0.0`, `2024.03.01`)
-- **Locale** — two-letter locale code (e.g. `en`, `fr`, `de`)
-- **ZIP file** — ZIP archive containing a top-level `index.html`
-- **Set as latest** — check to make this version the default
+```bash
+TOKEN=$(curl -s -X POST \
+  "https://idp.example.com/realms/myrealm/protocol/openid-connect/token" \
+  -d grant_type=client_credentials \
+  -d client_id=my-ci-client \
+  -d client_secret=MY_SECRET \
+  | jq -r .access_token)
+```
 
-The ZIP must satisfy the following constraints:
+### 2. Create a namespace (first time only)
+
+```bash
+curl -s -X POST \
+  "https://docroot.example.com/api/namespaces" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "myns", "public_read": false}'
+```
+
+### 3. Create a project (first time only)
+
+```bash
+curl -s -X POST \
+  "https://docroot.example.com/api/namespaces/myns/projects" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "myproject"}'
+```
+
+### 4. Upload documentation
+
+```bash
+curl -s -X POST \
+  "https://docroot.example.com/api/namespaces/myns/projects/myproject/upload" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@docs.zip" \
+  -F "version=1.0.0" \
+  -F "locale=en" \
+  -F "latest=true"
+```
+
+The ZIP must satisfy:
 
 - Contains `index.html` at the archive root
-- No path-traversal (`..`) entries
-- No symlink entries
-- No more than 500 files
-- No more than 500 MB extracted size
+- No path-traversal (`..`) entries, no symlinks
+- ≤ 500 files and ≤ 500 MB extracted
+
+> **Known limitation (alpha):** With a client-credentials
+> token the service account may not share roles with human
+> users, so ACL entries created by that token may not grant
+> access to end-users.  Use a device-code flow to act on
+> behalf of a human user when you need cross-user role
+> coverage.
 
 ---
 
-## Using the REST API
+## Access control
+
+Access is governed by `namespace.toml` on the server.  Roles
+are matched exactly against the roles in your JWT.
+
+> **Alpha limitation:** ACL roles cannot yet be managed via
+> the API.  Ask your operator to update `namespace.toml`
+> directly.
+
+---
+
+## REST API reference
 
 The full API reference is available at `/api/docs` (Swagger UI)
 when the backend is running.
 
-All write endpoints require an `Authorization: Bearer <token>`
-header. See the [operator guide](../operator/index.md) for
-authentication setup.
-
-### Key Endpoints
+### Key endpoints
 
 | Method | Path | Description |
-|--------|------|-------------|
+|---|---|---|
 | `GET` | `/api/namespaces` | List visible namespaces |
 | `POST` | `/api/namespaces` | Create a namespace |
-| `DELETE` | `/api/namespaces/{ns}` | Delete a namespace (creator only) |
+| `DELETE` | `/api/namespaces/{ns}` | Delete (creator only) |
 | `PUT` | `/api/namespaces/{ns}/acl/roles/{role}` | Add/update ACL role |
 | `DELETE` | `/api/namespaces/{ns}/acl/roles/{role}` | Remove ACL role |
 | `GET` | `/api/namespaces/{ns}/projects` | List projects |
@@ -81,3 +124,4 @@ authentication setup.
 | `GET` | `/api/namespaces/{ns}/projects/{p}/versions` | List versions |
 | `POST` | `/api/namespaces/{ns}/projects/{p}/upload` | Upload version |
 | `GET` | `/api/namespaces/{ns}/projects/{p}/resolve/{v}/{l}` | Resolve version/locale |
+| `GET` | `/api/oidc-config` | Get OIDC public client config |

@@ -1,7 +1,7 @@
 <template>
   <v-btn
-    prepend-icon="mdi-key"
-    @click="dialog = true"
+    prepend-icon="mdi-login"
+    @click="onButtonClick"
   >
     {{ isAuthenticated() ? t('logout') : t('login') }}
   </v-btn>
@@ -9,6 +9,20 @@
   <v-dialog v-model="dialog" max-width="420">
     <v-card :title="t('authToken')">
       <v-card-text>
+        <v-btn
+          v-if="oidcAvailable"
+          block
+          class="mb-4"
+          color="primary"
+          prepend-icon="mdi-openid"
+          @click="onOidcLogin"
+        >
+          {{ t('loginWithOidc') }}
+        </v-btn>
+        <v-divider
+          v-if="oidcAvailable"
+          class="mb-4"
+        />
         <v-text-field
           v-model="inputToken"
           autofocus
@@ -41,14 +55,37 @@
 </template>
 
 <script setup lang="ts">
-  import { ref } from 'vue'
+  import { onMounted, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { isAuthenticated, setToken } from '@/auth'
+  import {
+    getUserManager,
+    isAuthenticated,
+    loginWithOidc,
+    setToken,
+  } from '@/auth'
 
   const { t } = useI18n()
 
   const dialog = ref(false)
   const inputToken = ref('')
+  const oidcAvailable = ref(false)
+
+  onMounted(() => {
+    oidcAvailable.value = getUserManager() !== null
+  })
+
+  function onButtonClick () {
+    if (isAuthenticated()) {
+      onClear()
+    } else {
+      dialog.value = true
+    }
+  }
+
+  async function onOidcLogin () {
+    dialog.value = false
+    await loginWithOidc()
+  }
 
   function onSet () {
     if (!inputToken.value) return

@@ -1,0 +1,56 @@
+# Development-only Compose override.
+#
+# Adds a pre-configured Keycloak instance and wires the API
+# container to use it.  Both the browser and the API container
+# reach Keycloak via http://keycloak.127.0.0.1.nip.io:8080.
+#
+# The nip.io DNS service resolves that hostname to 127.0.0.1.
+# Inside the API container 127.0.0.1 is the container's own
+# loopback, not the host.  The extra_hosts entry overrides the
+# hostname to the Docker host gateway (where port 8080 is
+# published), so both paths resolve to the same Keycloak
+# process.
+#
+# DO NOT USE THIS FILE IN PRODUCTION.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.5
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HOSTNAME: keycloak.127.0.0.1.nip.io
+      KC_HTTP_PORT: "8080"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ../../deploy/dev/keycloak-realm.json:/opt/keycloak/data/import/docroot-realm.json:ro
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/localhost/8080 &&
+          printf 'GET /realms/docroot HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 &&
+          grep -q '"realm":"docroot"' <&3
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  api:
+    environment:
+      DOCROOT_OAUTH_JWKS_URL: >-
+        http://keycloak.127.0.0.1.nip.io:8080/realms/docroot/protocol/openid-connect/certs
+      DOCROOT_OAUTH_AUDIENCE: docroot-api
+      DOCROOT_OIDC_ISSUER: >-
+        http://keycloak.127.0.0.1.nip.io:8080/realms/docroot
+      DOCROOT_OIDC_CLIENT_ID: docroot-ui
+    extra_hosts:
+      - "keycloak.127.0.0.1.nip.io:host-gateway"
+    depends_on:
+      keycloak:
+        condition: service_healthy

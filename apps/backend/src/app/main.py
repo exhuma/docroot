@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.logging import get_logger, setup_logging
 from app.routes.auth import router as auth_router
 from app.routes.namespaces import router as namespaces_router
+from app.routes.oidc import router as oidc_router
 from app.routes.projects import router as projects_router
 from app.routes.session import router as session_router
 from app.routes.versions import router as versions_router
@@ -54,6 +55,12 @@ def _make_lifespan(settings: Settings):
             _log.info(
                 "JWKS endpoint: %s", settings.oauth_jwks_url
             )
+            if not settings.oauth_verify_ssl:
+                _log.warning(
+                    "DOCROOT_OAUTH_VERIFY_SSL=false — "
+                    "TLS verification for the JWKS endpoint is "
+                    "DISABLED. Do not use this setting in production."
+                )
         yield
         _log.info("Docroot API shutting down")
 
@@ -116,6 +123,7 @@ def create_app(
 
     application.include_router(auth_router)
     application.include_router(session_router)
+    application.include_router(oidc_router)
     application.include_router(namespaces_router)
     application.include_router(projects_router)
     application.include_router(versions_router)

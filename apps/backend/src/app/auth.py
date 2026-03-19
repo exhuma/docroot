@@ -11,10 +11,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from functools import lru_cache
+from typing import Any
 
+import httpx
 import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWK, PyJWKClient
+from pathlib import Path
 
 from app.logging import get_logger
 from app.settings import Settings, get_settings
@@ -39,17 +42,89 @@ class AuthContext:
 @lru_cache(maxsize=1)
 def _get_jwks_client(
     jwks_url: str,
+    ca_bundle: str = "",
+    verify_ssl: bool = True,
 ) -> PyJWKClient | _FileJWKSClient:
     """Return a cached JWKS client for the given URL.
 
     :param jwks_url: JWKS endpoint URL. ``file://`` prefix is
         supported for local development.
+    :param ca_bundle: Path to a PEM CA certificate or bundle to use
+        for TLS verification.  When empty the system default trust
+        store is used.  Has no effect for ``file://`` URLs.
+    :param verify_ssl: Set to ``False`` to disable TLS certificate
+        verification entirely.  Takes precedence over *ca_bundle*:
+        when ``False``, verification is off regardless of whether
+        *ca_bundle* is set.  A warning is logged when disabled.
     :returns: A JWKS client with ``get_signing_key_from_jwt``
         method.
     """
     if jwks_url.startswith("file://"):
-        return _FileJWKSClient(jwks_url[len("file://"):])
+        return _FileJWKSClient(Path(jwks_url[len("file://"):]))
+    if not verify_ssl:
+        _log.warning(
+            "DOCROOT_OAUTH_VERIFY_SSL=false — TLS certificate "
+            "verification is DISABLED for JWKS endpoint %s. "
+            "Do not use in production.",
+            jwks_url,
+        )
+        return _HttpsJWKSClient(
+            jwks_url, ssl_verify=False, cache_keys=True
+        )
+    if ca_bundle:
+        return _HttpsJWKSClient(
+            jwks_url, ssl_verify=ca_bundle, cache_keys=True
+        )
     return PyJWKClient(jwks_url, cache_keys=True)
+
+
+class _HttpsJWKSClient(PyJWKClient):
+    """PyJWKClient variant that fetches JWKS via httpx.
+
+    Supports custom CA bundles and disabling TLS verification for
+    environments where the default urllib-based client is insufficient.
+
+    :param uri: JWKS endpoint URL.
+    :param ssl_verify: Passed directly to
+        :func:`httpx.Client` ``verify`` parameter.  Accepts
+        ``True`` (system default), ``False`` (disable verification),
+        or a path string to a PEM CA certificate bundle.
+    """
+
+    def __init__(
+        self,
+        uri: str,
+        ssl_verify: bool | str,
+        **kwargs: Any,
+    ) -> None:
+        """Initialise with the given SSL verification setting.
+
+        :param uri: JWKS endpoint URL.
+        :param ssl_verify: httpx-compatible ``verify`` value:
+            ``True``, ``False``, or a CA bundle path.
+        :param kwargs: Forwarded to :class:`jwt.PyJWKClient`.
+        """
+        super().__init__(uri, **kwargs)
+        self._ssl_verify = ssl_verify
+
+    def fetch_data(self) -> Any:
+        """Fetch the JWKS JSON using httpx.
+
+        :returns: Parsed JWKS JSON dict.
+        :raises jwt.PyJWKClientConnectionError: On any HTTP error.
+        """
+        try:
+            with httpx.Client(verify=self._ssl_verify) as client:
+                response = client.get(
+                    self.uri,
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.HTTPError as exc:
+            raise jwt.PyJWKClientConnectionError(
+                f"Failed to fetch JWKS from {self.uri}: {exc}"
+            ) from exc
 
 
 class _FileJWKSClient:
@@ -58,12 +133,12 @@ class _FileJWKSClient:
     :param path: Filesystem path to the JWKS JSON file.
     """
 
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: Path) -> None:
         """Initialise and load keys from *path*.
 
         :param path: Path to the JWKS JSON file.
         """
-        with open(path) as fh:
+        with path.absolute().open() as fh:
             data: dict[str, object] = json.load(fh)
         keys_raw = data.get("keys", [])
         if not isinstance(keys_raw, list):
@@ -127,7 +202,11 @@ def validate_token(
     :returns: Validated :class:`AuthContext`.
     :raises HTTPException: 401 on any validation failure.
     """
-    client = _get_jwks_client(settings.oauth_jwks_url)
+    client = _get_jwks_client(
+        settings.oauth_jwks_url,
+        settings.oauth_ca_bundle,
+        settings.oauth_verify_ssl,
+    )
     try:
         signing_key = client.get_signing_key_from_jwt(token)
     except jwt.exceptions.PyJWKClientError as exc:
