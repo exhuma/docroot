@@ -8,6 +8,12 @@
 
   <v-container class="user-manual">
     <v-card class="mb-6">
+      <v-card-text>
+        <ProseContent />
+      </v-card-text>
+    </v-card>
+
+    <v-card class="mb-6">
       <v-card-title class="text-h5">
         {{ t('manualBrowsing') }}
       </v-card-title>
@@ -116,6 +122,7 @@
 <script setup lang="ts">
   import { useI18n } from 'vue-i18n'
   import AuthBar from '@/components/AuthBar.vue'
+  import ProseContent from '@/components/ProseContent.vue'
 
   const { t } = useI18n()
 

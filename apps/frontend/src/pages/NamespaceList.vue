@@ -60,10 +60,9 @@
       </v-list-item>
     </v-list>
 
-    <v-empty-state
-      v-else-if="!loading"
-      :title="t('noNamespaces')"
-    />
+    <template v-else-if="!loading">
+      <ProseContent class="mb-4" />
+    </template>
 
     <v-progress-circular
       v-if="loading"
@@ -128,6 +127,7 @@
     token,
   } from '@/auth'
   import AuthBar from '@/components/AuthBar.vue'
+  import ProseContent from '@/components/ProseContent.vue'
 
   const { t, locale } = useI18n()
 

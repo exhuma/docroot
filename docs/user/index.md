@@ -1,15 +1,7 @@
 # User Guide
 
-## Browsing documentation
-
-Open the application in a browser.  The home page lists all
-namespaces you have read access to.  Select a namespace →
-project → version to open the documentation in the embedded
-viewer.
-
-If the exact locale you requested is unavailable, Docroot falls
-back to English (`en`) and then to any available locale.  A
-notice is shown when a fallback is used.
+```{include} ../../apps/frontend/src/assets/content/intro.en.md
+```
 
 ---
 
