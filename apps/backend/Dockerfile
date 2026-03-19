@@ -4,4 +4,7 @@ WORKDIR /app
 COPY pyproject.toml .
 RUN uv sync --no-dev
 COPY src/ src/
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Invoke uvicorn from the project venv directly to avoid uv
+# requiring a writable cache directory at container start-up
+# (relevant for non-privileged k8s pods with a read-only rootfs).
+CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

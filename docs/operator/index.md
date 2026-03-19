@@ -57,6 +57,43 @@ volumes:
 
 ---
 
+## Kubernetes
+
+The nginx image accepts two environment variables to control where
+it routes API requests.  This is needed when the container hostname
+`api` is not resolvable (e.g. single-pod deployments where both
+containers share a network namespace):
+
+| Variable | Default | Description |
+|---|---|---|
+| `API_HOST` | `api` | Hostname or IP of the FastAPI container. Set to `localhost` for same-pod k8s deployments. |
+| `API_PORT` | `8000` | TCP port of the FastAPI container. |
+
+**Single-pod (sidecar) deployment:** Both containers share the pod
+network namespace, so `localhost` resolves to the API container:
+
+```yaml
+containers:
+  - name: accelerator
+    image: ghcr.io/exhuma/docroot/nginx:latest
+    env:
+      - name: API_HOST
+        value: localhost
+  - name: api
+    image: ghcr.io/exhuma/docroot/backend:latest
+```
+
+**Multi-pod deployment (separate Deployments + Service):** Set
+`API_HOST` to the Kubernetes service name that fronts the API pods:
+
+```yaml
+env:
+  - name: API_HOST
+    value: docroot-api  # name of the k8s Service for the backend
+```
+
+---
+
 ## OIDC Authentication
 
 Docroot uses a **two-client** architecture:
