@@ -1,15 +1,11 @@
-# Operator / Maintainer Manual
-
-Covers installation, deployment, OIDC configuration, and
-namespace ACL management.
-
----
+# Operator Manual
 
 ## Prerequisites
 
 - Docker and Docker Compose
-- An OIDC-compatible identity provider (e.g. Keycloak, Auth0,
-  GitHub, GitLab)
+- An OIDC-compliant identity provider (Keycloak, Entra ID,
+  Google, or any IDP that supports
+  [Authorization Code + PKCE](https://oauth.net/2/pkce/))
 
 ---
 
@@ -19,189 +15,170 @@ namespace ACL management.
 git clone https://github.com/exhuma/docroot.git
 cd docroot
 cp deploy/compose/.env.example deploy/compose/.env
-# Edit deploy/compose/.env as needed
+# Edit deploy/compose/.env — see Environment Variables below
 docker compose -f deploy/compose/docker-compose.yml up
 ```
 
-The application is then available on port 80.
+Open `http://localhost` in a browser.
 
 ---
 
 ## Environment Variables
 
-All variables use the `DOCROOT_` prefix. Set them in the
-container environment or in a `.env` file loaded by the API
+All variables use the `DOCROOT_` prefix.
+Set them in `deploy/compose/.env` or pass them directly to the
 container.
 
 | Variable | Default | Description |
-|----------|---------|-------------|
+|---|---|---|
 | `DOCROOT_DATA_ROOT` | `/data` | Filesystem path for stored data |
-| `DOCROOT_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint URL for JWT validation. Supports `file://` for local dev. |
-| `DOCROOT_OAUTH_AUDIENCE` | *(empty)* | Expected JWT audience. Empty disables audience validation. |
-| `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor name. `keycloak` is the only extractor shipped in this release; the interface is designed for extension. |
-| `DOCROOT_CORS_ORIGINS` | `*` | Comma-separated CORS origins, or `*` for any. |
+| `DOCROOT_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint for JWT validation (`https://…` or `file://…`) |
+| `DOCROOT_OAUTH_AUDIENCE` | *(empty)* | Expected `aud` claim. Empty disables audience validation. |
+| `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor. Only `keycloak` is shipped in this release. |
+| `DOCROOT_CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*`. |
+| `DOCROOT_OIDC_ISSUER` | *(empty)* | OIDC issuer URL served to the browser. Empty disables the Login button. |
+| `DOCROOT_OIDC_CLIENT_ID` | *(empty)* | Public client ID for the browser authorization-code + PKCE flow. |
+| `DOCROOT_COOKIE_SECURE` | `false` | Set `true` on HTTPS deployments. |
+| `DOCROOT_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 | `DOCROOT_ZIP_MAX_FILES` | `500` | Maximum files in an uploaded ZIP. |
 | `DOCROOT_ZIP_MAX_EXTRACTED_MB` | `500` | Maximum extracted ZIP size in MB. |
-| `DOCROOT_LOG_LEVEL` | `INFO` | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
-| `DOCROOT_COOKIE_SECURE` | `false` | Set `true` on HTTPS deployments. |
-| `DOCROOT_OIDC_ISSUER` | *(empty)* | OIDC issuer URL served to the browser UI. Empty disables the OIDC login button. |
-| `DOCROOT_OIDC_CLIENT_ID` | *(empty)* | OIDC **public** client ID for the browser authorization-code + PKCE flow. |
 
 ---
 
-## Volumes
+## Volume
 
-Mount one external volume at `/data`. All namespace, project,
-and documentation data is stored there.
+Mount a single host directory at `/data`.
+All data is stored there; the container is stateless.
 
 ```yaml
 volumes:
   - /your/host/path:/data
 ```
 
-Restart the containers at any time without data loss.
-
 ---
 
-## OIDC / OAuth2 Configuration
+## OIDC Authentication
 
-Docroot works with **any OIDC-compliant identity provider**.
-It does not depend on Keycloak specifically.  The architecture
-uses two clients:
+Docroot uses a **two-client** architecture:
 
-1. **Confidential back-end client** — validates JWT Bearer tokens
-   using JWKS (resource-server behaviour, no user redirect).
-2. **Public front-end client** — drives the browser
-   authorization-code + PKCE flow via `oidc-client-ts`.
+- **Back-end (resource server)** — validates Bearer tokens via
+  JWKS.  No user redirect; pure JWT verification.
+- **Front-end (public client)** — drives the browser
+  [Authorization Code + PKCE](https://oauth.net/2/pkce/) flow
+  via `oidc-client-ts`.
 
-### General setup pattern
+Configure both clients for every IDP:
 
-For every OIDC-compliant IDP, apply the same two-step
-configuration:
-
-**Step 1 — back-end (resource server):**
-
-```env
-# Point to the IDP's JWKS endpoint
+```shell
+# Back-end: where to fetch signing keys, and the expected audience
 DOCROOT_OAUTH_JWKS_URL=https://<idp>/.well-known/jwks.json
-# Audience value expected in every incoming JWT
-DOCROOT_OAUTH_AUDIENCE=<your-api-audience>
-```
+DOCROOT_OAUTH_AUDIENCE=<api-audience>
 
-**Step 2 — front-end (public client):**
-
-```env
-# OIDC issuer URL (same as the `iss` claim in your tokens)
+# Front-end: issuer and public client id
 DOCROOT_OIDC_ISSUER=https://<idp>
-# Public client ID registered at the IDP
-DOCROOT_OIDC_CLIENT_ID=<your-public-client-id>
+DOCROOT_OIDC_CLIENT_ID=<public-client-id>
 ```
 
-Register `https://<your-host>/oidc-callback` as the allowed
-redirect URI at your IDP.  No client secret is required for the
-front-end client (PKCE only).
+Register `https://<your-host>/oidc-callback` as the redirect
+URI at your IDP.  No client secret is needed (PKCE only).
 
-### JWKS key rollover
+### Audience validation
 
-For HTTP JWKS URLs the backend caches signing keys in memory.
-When a token arrives with a `kid` not present in the cache
-the JWKS endpoint is fetched automatically, so standard IDP
-key rotation requires no operator intervention.
+`DOCROOT_OAUTH_AUDIENCE` must match the `aud` claim in the
+access token.  This is the trickiest part and differs between
+IDPs — see the provider-specific sections below.
 
-For `file://` JWKS (local development only) keys are loaded
-once at process start. Restart the API container after
-replacing the key file.
+### JWKS key rotation
+
+The backend fetches the JWKS endpoint automatically when an
+unknown `kid` arrives.  Standard IDP key rotation needs no
+operator action.
 
 ---
 
-## Keycloak (self-hosted)
+## Keycloak
 
 ### 1. Create a realm
 
 In the Keycloak admin console, create a realm (e.g. `docroot`).
 
-### 2. Create a confidential back-end client
+### 2. Back-end client (confidential)
 
-1. **Clients → Create client**
-2. Client ID: `docroot-api`
-3. Client authentication: **ON** (confidential)
-4. Service accounts: **ON** (for client-credentials uploads)
+1. **Clients → Create client**; Client ID: `docroot-api`
+2. Client authentication: **ON**; Service accounts: **ON**
 
-Configure the API container:
-
-```env
-DOCROOT_OAUTH_JWKS_URL=https://keycloak.example.com/realms/\
-docroot/protocol/openid-connect/certs
+```shell
+DOCROOT_OAUTH_JWKS_URL=https://keycloak.example.com/realms/docroot/protocol/openid-connect/certs
 DOCROOT_OAUTH_AUDIENCE=docroot-api
 ```
 
-### 3. Create a public front-end client
+### 3. Front-end client (public)
 
-1. **Clients → Create client**
-2. Client ID: `docroot-ui`
-3. Client authentication: **OFF** (public)
-4. Valid redirect URIs:
-   `https://docroot.example.com/oidc-callback`
-5. Web origins: `https://docroot.example.com`
+1. **Clients → Create client**; Client ID: `docroot-ui`
+2. Client authentication: **OFF**
+3. Valid redirect URIs: `https://docroot.example.com/oidc-callback`
+4. Web origins: `https://docroot.example.com`
 
-Configure the API container:
-
-```env
+```shell
 DOCROOT_OIDC_ISSUER=https://keycloak.example.com/realms/docroot
 DOCROOT_OIDC_CLIENT_ID=docroot-ui
 ```
 
-### 4. Create roles and assign them
+### 4. Roles
 
-1. Go to **Realm roles → Create role** (e.g. `docroot-editor`).
-2. Assign the role to users via **Users → Role mappings**.
-3. Reference the role name in `namespace.toml` ACL files.
+Create realm roles (e.g. `docroot-editor`) under
+**Realm roles → Create role** and assign them to users via
+**Users → Role mappings**.  Reference the exact role name in
+`namespace.toml` ACL entries.
 
-The Keycloak role extractor reads:
+The Keycloak role extractor reads `realm_access.roles` and
+`resource_access.<client_id>.roles` from the token.
 
-- `realm_access.roles` — realm-level roles
-- `resource_access.<client_id>.roles` — client-level roles
+### Getting the audience into the token
+
+Keycloak does **not** add an `aud` claim for the back-end
+client by default.  Two approaches:
+
+**Transparent (role-based):** When a user is assigned a role
+that is *scoped to* `docroot-api`, Keycloak automatically
+includes `docroot-api` in the `aud` claim.  No mapper needed —
+assigning the role is enough.  The trade-off is that audience
+presence is tied to role assignment.
+
+**Explicit (audience mapper):** Add a *Hardcoded audience*
+mapper on the `docroot-ui` client:
+`Clients → docroot-ui → Client scopes → dedicated →
+Add mapper → Hardcoded audience → Included audience: docroot-api`.
+This guarantees `aud` is always present regardless of roles.
+The trade-off is a small amount of manual configuration.
 
 ---
 
-## Microsoft / Entra ID (Azure AD)
-
-Microsoft Entra ID is a fully OIDC-compliant provider and can
-be used directly without any intermediary.
+## Microsoft Entra ID (Azure AD)
 
 ### 1. Register an application
 
-1. In the [Azure portal](https://portal.azure.com), go to
-   **Azure Active Directory → App registrations →
-   New registration**.
-2. Supported account types: choose the appropriate scope
-   (single tenant, multi-tenant, etc.).
-3. Redirect URI: **Single-page application (SPA)**
-   `https://docroot.example.com/oidc-callback`
-4. Note the **Application (client) ID** (this is your
-   `client_id`).
-5. Note the **Directory (tenant) ID**.
+1. **Azure AD → App registrations → New registration**
+2. Redirect URI type: **Single-page application (SPA)**;
+   value: `https://docroot.example.com/oidc-callback`
+3. Note the **Application (client) ID** and **Directory
+   (tenant) ID**.
 
-### 2. Expose an API (back-end audience)
+### 2. Expose an API
 
-1. Under **Expose an API**, set the **Application ID URI**
-   (e.g. `api://<client-id>`).
-2. This value becomes your `DOCROOT_OAUTH_AUDIENCE`.
+Under **Expose an API**, set the **Application ID URI**
+(e.g. `api://<client-id>`).
+This becomes your `DOCROOT_OAUTH_AUDIENCE`.
 
-> **Warning — token version:** Entra ID issues v1 access
-> tokens by default. The configuration below targets
-> **v2 tokens only**. Open the app **Manifest** in the Azure
-> portal and set `"accessTokenAcceptedVersion": 2` before
-> applying it.
+> **Token version:** Entra ID issues v1 tokens by default.
+> In the app **Manifest**, set
+> `"accessTokenAcceptedVersion": 2` to get v2 tokens; the
+> JWKS URL below only works with v2.
 
-### 3. Configure Docroot
-
-```env
-DOCROOT_OAUTH_JWKS_URL=https://login.microsoftonline.com/\
-<tenant-id>/discovery/v2.0/keys
+```shell
+DOCROOT_OAUTH_JWKS_URL=https://login.microsoftonline.com/<tenant-id>/discovery/v2.0/keys
 DOCROOT_OAUTH_AUDIENCE=api://<client-id>
-DOCROOT_OIDC_ISSUER=https://login.microsoftonline.com/\
-<tenant-id>/v2.0
+DOCROOT_OIDC_ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
 DOCROOT_OIDC_CLIENT_ID=<client-id>
 ```
 
@@ -209,69 +186,36 @@ DOCROOT_OIDC_CLIENT_ID=<client-id>
 
 ## Google
 
-Google Identity is fully OIDC-compliant and can be used
-directly.
-
-### 1. Create an OAuth2 client
-
-1. In the [Google Cloud Console](https://console.cloud.google.com),
-   go to **APIs & Services → Credentials → Create credentials
-   → OAuth client ID**.
-2. Application type: **Web application**.
-3. Add an authorised redirect URI:
-   `https://docroot.example.com/oidc-callback`
-4. Note the **Client ID** (no secret needed; Docroot uses PKCE).
-
-### 2. Configure Docroot
-
-```env
-DOCROOT_OAUTH_JWKS_URL=\
-https://www.googleapis.com/oauth2/v3/certs
+```shell
+DOCROOT_OAUTH_JWKS_URL=https://www.googleapis.com/oauth2/v3/certs
 DOCROOT_OAUTH_AUDIENCE=<google-client-id>
 DOCROOT_OIDC_ISSUER=https://accounts.google.com
 DOCROOT_OIDC_CLIENT_ID=<google-client-id>
 ```
 
----
-
-## GitHub
-
-> **Note:** GitHub does **not** provide a standard OIDC
-> authorization endpoint for browser user authentication.
-> GitHub's OIDC provider (`token.actions.githubusercontent.com`)
-> is intended for GitHub Actions workload identity only and
-> cannot be used for interactive user logins via `oidc-client-ts`.
->
-> To use GitHub as a login provider for Docroot, run an
-> OIDC-compliant proxy in front of it.  Popular options include
-> [Keycloak](https://www.keycloak.org/) (identity brokering),
-> [Dex](https://dexidp.io/), or [Zitadel](https://zitadel.com/).
-> Configure that proxy as the Docroot OIDC issuer.
+In the [Google Cloud Console](https://console.cloud.google.com):
+**APIs & Services → Credentials → OAuth client ID**;
+application type **Web application**; add
+`https://docroot.example.com/oidc-callback` as an authorised
+redirect URI.
 
 ---
 
-## Facebook
+## Providers without native OIDC support
 
-> **Note:** Facebook Login uses OAuth 2.0 but its user access
-> tokens are **not** JWTs and Facebook does not expose a
-> standards-compliant OIDC discovery document suitable for
-> browser authorization-code + PKCE flows with
-> `oidc-client-ts`.
->
-> To use Facebook as a login provider for Docroot, run an
-> OIDC-compliant proxy in front of it (e.g. Keycloak, Dex, or
-> Zitadel with Facebook federation enabled).  Configure that
-> proxy as the Docroot OIDC issuer.
+GitHub and Facebook do not expose a standards-compliant OIDC
+endpoint for browser user logins.  To use them, run an
+OIDC-compliant proxy such as
+[Keycloak](https://www.keycloak.org/) (identity brokering),
+[Dex](https://dexidp.io/), or
+[Zitadel](https://zitadel.com/) in front of them and point
+Docroot at the proxy.
 
 ---
 
-## Namespace ACL Format
+## Namespace ACL
 
-Each namespace directory contains a `namespace.toml` file that
-controls access. The file is read on each request and cached in
-memory; changes take effect immediately on the next cache miss.
-
-### Full Example
+Each namespace stores a `namespace.toml` file:
 
 ```toml
 creator = "alice"
@@ -291,38 +235,20 @@ read = true
 write = false
 ```
 
-### Fields
+| Field | Description |
+|---|---|
+| `creator` | `sub` claim of the creator. Only this user may delete the namespace. |
+| `versioning` | Sort scheme: `semver`, `calver`, `pep440`, or a custom regex. |
+| `access.public_read` | Allow unauthenticated read. |
+| `access.roles[].role` | Exact role name from the JWT. |
+| `access.roles[].read` / `.write` | Grant read / write access. |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `creator` | string | Subject of the user who created the namespace. Only this user may delete the namespace. |
-| `versioning` | string | Versioning scheme for display sorting. Values: `semver`, `calver`, `pep440`, or a regex pattern. |
-| `access.public_read` | bool | Allow unauthenticated read access. |
-| `access.roles[].role` | string | Role name from the JWT (exact match). |
-| `access.roles[].read` | bool | Grant read access. |
-| `access.roles[].write` | bool | Grant write (upload) access. |
-
-### Managing Roles via API
-
-Use the ACL endpoints instead of editing files directly:
-
-```bash
-# Grant editor role write access
-curl -X PUT /api/namespaces/myns/acl/roles/editor \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"read": true, "write": true}'
-
-# Revoke a role
-curl -X DELETE /api/namespaces/myns/acl/roles/editor \
-  -H "Authorization: Bearer $TOKEN"
-```
+> **Alpha limitation:** ACL roles cannot yet be managed via
+> the API.  Edit `namespace.toml` directly on the host.
 
 ---
 
-## Volume and Data Layout
-
-All data lives under `DOCROOT_DATA_ROOT`:
+## Data Layout
 
 ```
 /data/
@@ -335,31 +261,22 @@ All data lives under `DOCROOT_DATA_ROOT`:
             <version>/
               <locale>/
                 index.html
-                metadata.toml
-                ...
-          latest -> <version>  (symlink)
+                …
+          latest -> <version>   (symlink)
 ```
-
-Restart the application at any time without data loss.
-The filesystem is the source of truth.
 
 ---
 
-## Development Mode
-
-See the repository `README.md` and `Taskfile.yml` for local
-development setup. Use `task gen-token` to generate a test JWT:
+## Development Setup
 
 ```bash
 task gen-token -- --sub alice --roles editor
 ```
 
----
+See `README.md` and `Taskfile.yml` for the full local dev
+workflow.
 
-### Local Keycloak (dev compose override)
-
-A pre-configured Keycloak instance is available as a Compose
-override for end-to-end development without an external IDP.
+### Local Keycloak overlay
 
 ```bash
 docker compose \
@@ -369,20 +286,16 @@ docker compose \
 ```
 
 Both the browser and the API container reach Keycloak at
-`http://keycloak.127.0.0.1.nip.io:8080`. The `nip.io` DNS
-service resolves that hostname to `127.0.0.1`; an
-`extra_hosts` entry in the API container overrides it to the
-Docker host gateway so it reaches the published port 8080.
+`http://keycloak.127.0.0.1.nip.io:8080`.
 
-Pre-loaded test accounts:
+Pre-loaded accounts:
 
-| Username | Password | Role             |
-|----------|----------|------------------|
-| `alice`  | `alice`  | `docroot-editor` |
-| `bob`    | `bob`    | `docroot-reader` |
+| Username | Password | Role |
+|---|---|---|
+| `alice` | `alice` | `docroot-editor` |
+| `bob` | `bob` | `docroot-reader` |
 
-Admin console:
-`http://keycloak.127.0.0.1.nip.io:8080/admin` (admin / admin)
+Admin: `http://keycloak.127.0.0.1.nip.io:8080/admin`
+(admin / admin)
 
-> **This setup is for local development only. Do not use it
-> in any internet-facing deployment.**
+> **For local development only. Do not expose to the internet.**

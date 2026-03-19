@@ -1,91 +1,61 @@
 # User Guide
 
-This guide covers how to browse and upload documentation using
-the Docroot UI and REST API.
+## Browsing documentation
 
----
+Open the application in a browser.  The home page lists all
+namespaces you have read access to.  Select a namespace →
+project → version to open the documentation in the embedded
+viewer.
 
-## Browsing Documentation
-
-Open the application in a browser. The home page lists all
-namespaces you have access to. Select a namespace to see its
-projects, then select a project to see available versions.
-
-Select a version and a locale to open the documentation in the
-embedded viewer. If the exact locale you requested is unavailable,
-Docroot will automatically fall back to English (`en`), then to
-any available locale. A notice is shown when a fallback is used.
+If the exact locale you requested is unavailable, Docroot falls
+back to English (`en`) and then to any available locale.  A
+notice is shown when a fallback is used.
 
 ---
 
 ## Authentication
 
-Protected operations (creating namespaces or projects, uploading
-versions) require a Bearer token issued by the configured OIDC
-provider.
+Protected operations (creating namespaces, uploading versions)
+require a Bearer token.
 
-### OIDC login (recommended for browser use)
+### OIDC login
 
-1. Click the **Login** button in the top-right corner.
-2. If OIDC is configured, click **Login with OIDC** to be
-   redirected to the identity provider.
-3. After authenticating, you are redirected back and logged in
-   automatically.
+When OIDC is configured, a **Login** button is visible in the
+toolbar.  Click it to be redirected to the identity provider.
+After authenticating you are redirected back and logged in
+automatically.  Your display name and avatar appear in the
+toolbar.  Click **Logout** to end the session.
 
-### Manual token entry (development / CLI)
+Silent refresh runs in the background; you will not be
+interrupted during normal use.  If the session expires the UI
+resets to the unauthenticated state automatically.
 
-If OIDC is not configured, or for local development:
+### Manual token (development)
 
-1. Click the **Login** button.
-2. Paste your Bearer token into the text field.
-3. Click **Set token**.
-
-To log out, click the login icon and choose **Logout** (or
-**Clear token**).
+Click the **Set token** button (visible only in development
+builds when OIDC is also enabled, or always when OIDC is
+disabled), paste a Bearer token, and click **Set token**.
 
 ---
 
-## Uploading Documentation
+## Automated uploads (CI/CD)
 
-Navigate to a project's version list, then click **Upload**
-(visible only when authenticated with write access).
+Use the
+[OAuth 2.0 client credentials grant](https://oauth.net/2/grant-types/client-credentials/)
+to obtain a token without user interaction.
 
-Fill in:
-
-- **Version** — version string for the upload
-  (e.g. `1.0.0`, `2024.03.01`)
-- **Locale** — two-letter locale code (e.g. `en`, `fr`, `de`)
-- **ZIP file** — ZIP archive containing a top-level `index.html`
-- **Set as latest** — check to make this version the default
-
-The ZIP must satisfy the following constraints:
-
-- Contains `index.html` at the archive root
-- No path-traversal (`..`) entries
-- No symlink entries
-- No more than 500 files
-- No more than 500 MB extracted size
-
----
-
-## Automated Uploads via REST API (CI/CD)
-
-For automated pipelines, use the OAuth2 client-credentials
-grant to obtain a token and upload in a single script.
-
-### Step 1 — Obtain a token
+### 1. Obtain a token
 
 ```bash
 TOKEN=$(curl -s -X POST \
-  "https://idp.example.com/realms/myrealm\
-/protocol/openid-connect/token" \
+  "https://idp.example.com/realms/myrealm/protocol/openid-connect/token" \
   -d grant_type=client_credentials \
   -d client_id=my-ci-client \
   -d client_secret=MY_SECRET \
   | jq -r .access_token)
 ```
 
-### Step 2 — Create a namespace (first time only)
+### 2. Create a namespace (first time only)
 
 ```bash
 curl -s -X POST \
@@ -95,7 +65,7 @@ curl -s -X POST \
   -d '{"name": "myns", "public_read": false}'
 ```
 
-### Step 3 — Create a project (first time only)
+### 3. Create a project (first time only)
 
 ```bash
 curl -s -X POST \
@@ -105,12 +75,11 @@ curl -s -X POST \
   -d '{"name": "myproject"}'
 ```
 
-### Step 4 — Upload documentation
+### 4. Upload documentation
 
 ```bash
 curl -s -X POST \
-  "https://docroot.example.com/api/namespaces/myns\
-/projects/myproject/upload" \
+  "https://docroot.example.com/api/namespaces/myns/projects/myproject/upload" \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@docs.zip" \
   -F "version=1.0.0" \
@@ -118,58 +87,44 @@ curl -s -X POST \
   -F "latest=true"
 ```
 
-> **Known limitation (alpha):** When using a client-credentials
-> flow, the service account may not have any roles matching the
-> human users of the system.  ACL entries created via this flow
-> may therefore grant access only to the service account's own
-> roles, not to end-users.  Use a device-code flow to act on
-> behalf of a human user if you need role-based access for other
-> people.
+The ZIP must satisfy:
+
+- Contains `index.html` at the archive root
+- No path-traversal (`..`) entries, no symlinks
+- ≤ 500 files and ≤ 500 MB extracted
+
+> **Known limitation (alpha):** With a client-credentials
+> token the service account may not share roles with human
+> users, so ACL entries created by that token may not grant
+> access to end-users.  Use a device-code flow to act on
+> behalf of a human user when you need cross-user role
+> coverage.
 
 ---
 
-## Access Control (ACL)
+## Access control
 
-Access to each namespace is governed by a `namespace.toml` file
-on the server. Roles in that file are matched exactly against the
-roles present in your JWT.
+Access is governed by `namespace.toml` on the server.  Roles
+are matched exactly against the roles in your JWT.
 
-> **Alpha limitation:** ACL roles cannot yet be granted or revoked
-> via the API. Ask your operator to update `namespace.toml`
-> directly if you need access changes.
-
-Example `namespace.toml`:
-
-```toml
-creator = "alice"
-
-[access]
-public_read = false
-
-[[access.roles]]
-role = "docroot-editor"
-read = true
-write = true
-```
+> **Alpha limitation:** ACL roles cannot yet be managed via
+> the API.  Ask your operator to update `namespace.toml`
+> directly.
 
 ---
 
-## Using the REST API
+## REST API reference
 
 The full API reference is available at `/api/docs` (Swagger UI)
 when the backend is running.
 
-All write endpoints require an `Authorization: Bearer <token>`
-header. See the [operator guide](../operator/index.md) for
-authentication setup.
-
-### Key Endpoints
+### Key endpoints
 
 | Method | Path | Description |
-|--------|------|-------------|
+|---|---|---|
 | `GET` | `/api/namespaces` | List visible namespaces |
 | `POST` | `/api/namespaces` | Create a namespace |
-| `DELETE` | `/api/namespaces/{ns}` | Delete a namespace (creator only) |
+| `DELETE` | `/api/namespaces/{ns}` | Delete (creator only) |
 | `PUT` | `/api/namespaces/{ns}/acl/roles/{role}` | Add/update ACL role |
 | `DELETE` | `/api/namespaces/{ns}/acl/roles/{role}` | Remove ACL role |
 | `GET` | `/api/namespaces/{ns}/projects` | List projects |
