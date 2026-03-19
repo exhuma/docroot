@@ -36,6 +36,10 @@ class Settings(BaseSettings):
         used to verify the JWKS endpoint's TLS certificate.  Set
         this when the IDP is behind an internal or self-signed CA.
         Leave empty to use the system default trust store.
+    :param oauth_verify_ssl: Set to ``False`` to disable TLS
+        certificate verification when fetching the JWKS endpoint.
+        **Only use in non-production / trusted-network environments.**
+        A warning is logged on startup when verification is disabled.
     """
 
     model_config = SettingsConfigDict(
@@ -56,6 +60,7 @@ class Settings(BaseSettings):
     oidc_issuer: str = Field(default="")
     oidc_client_id: str = Field(default="")
     oauth_ca_bundle: str = Field(default="")
+    oauth_verify_ssl: bool = Field(default=True)
 
 
 @lru_cache(maxsize=1)

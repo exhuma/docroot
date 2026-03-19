@@ -35,6 +35,7 @@ container.
 | `DOCROOT_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint for JWT validation (`https://…` or `file://…`) |
 | `DOCROOT_OAUTH_AUDIENCE` | *(empty)* | Expected `aud` claim. Empty disables audience validation. |
 | `DOCROOT_OAUTH_CA_BUNDLE` | *(empty)* | Path to a PEM CA cert/bundle for verifying the JWKS endpoint. Set when the IDP uses an internal or self-signed CA. |
+| `DOCROOT_OAUTH_VERIFY_SSL` | `true` | Set `false` to disable TLS verification for the JWKS endpoint. **Not for production use.** A warning is logged on startup. |
 | `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor. Only `keycloak` is shipped in this release. |
 | `DOCROOT_CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*`. |
 | `DOCROOT_OIDC_ISSUER` | *(empty)* | OIDC issuer URL served to the browser. Empty disables the Login button. |

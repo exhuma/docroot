@@ -43,6 +43,7 @@ class AuthContext:
 def _get_jwks_client(
     jwks_url: str,
     ca_bundle: str = "",
+    verify_ssl: bool = True,
 ) -> PyJWKClient | _FileJWKSClient:
     """Return a cached JWKS client for the given URL.
 
@@ -51,49 +52,69 @@ def _get_jwks_client(
     :param ca_bundle: Path to a PEM CA certificate or bundle to use
         for TLS verification.  When empty the system default trust
         store is used.  Has no effect for ``file://`` URLs.
+    :param verify_ssl: Set to ``False`` to disable TLS certificate
+        verification entirely.  Takes precedence over *ca_bundle*:
+        when ``False``, verification is off regardless of whether
+        *ca_bundle* is set.  A warning is logged when disabled.
     :returns: A JWKS client with ``get_signing_key_from_jwt``
         method.
     """
     if jwks_url.startswith("file://"):
         return _FileJWKSClient(Path(jwks_url[len("file://"):]))
+    if not verify_ssl:
+        _log.warning(
+            "DOCROOT_OAUTH_VERIFY_SSL=false — TLS certificate "
+            "verification is DISABLED for JWKS endpoint %s. "
+            "Do not use in production.",
+            jwks_url,
+        )
+        return _HttpsJWKSClient(
+            jwks_url, ssl_verify=False, cache_keys=True
+        )
     if ca_bundle:
-        return _HttpsJWKSClient(jwks_url, ca_bundle=ca_bundle, cache_keys=True)
+        return _HttpsJWKSClient(
+            jwks_url, ssl_verify=ca_bundle, cache_keys=True
+        )
     return PyJWKClient(jwks_url, cache_keys=True)
 
 
 class _HttpsJWKSClient(PyJWKClient):
     """PyJWKClient variant that fetches JWKS via httpx.
 
-    Allows specifying a custom CA bundle for environments where the
-    IDP is served with an internal or self-signed certificate.
+    Supports custom CA bundles and disabling TLS verification for
+    environments where the default urllib-based client is insufficient.
 
     :param uri: JWKS endpoint URL.
-    :param ca_bundle: Path to a PEM CA certificate or bundle file.
+    :param ssl_verify: Passed directly to
+        :func:`httpx.Client` ``verify`` parameter.  Accepts
+        ``True`` (system default), ``False`` (disable verification),
+        or a path string to a PEM CA certificate bundle.
     """
 
     def __init__(
         self,
         uri: str,
-        ca_bundle: str,
+        ssl_verify: bool | str,
         **kwargs: Any,
     ) -> None:
-        """Initialise with a custom CA bundle.
+        """Initialise with the given SSL verification setting.
 
         :param uri: JWKS endpoint URL.
-        :param ca_bundle: Path to a CA certificate or bundle file.
+        :param ssl_verify: httpx-compatible ``verify`` value:
+            ``True``, ``False``, or a CA bundle path.
         :param kwargs: Forwarded to :class:`jwt.PyJWKClient`.
         """
         super().__init__(uri, **kwargs)
-        self._ca_bundle = ca_bundle
+        self._ssl_verify = ssl_verify
 
     def fetch_data(self) -> Any:
-        """Fetch the JWKS JSON using httpx with the custom CA bundle.
+        """Fetch the JWKS JSON using httpx.
 
         :returns: Parsed JWKS JSON dict.
         :raises jwt.PyJWKClientConnectionError: On any HTTP error.
         """
         try:
-            with httpx.Client(verify=self._ca_bundle) as client:
+            with httpx.Client(verify=self._ssl_verify) as client:
                 response = client.get(
                     self.uri,
                     timeout=self.timeout,
@@ -181,7 +202,11 @@ def validate_token(
     :returns: Validated :class:`AuthContext`.
     :raises HTTPException: 401 on any validation failure.
     """
-    client = _get_jwks_client(settings.oauth_jwks_url, settings.oauth_ca_bundle)
+    client = _get_jwks_client(
+        settings.oauth_jwks_url,
+        settings.oauth_ca_bundle,
+        settings.oauth_verify_ssl,
+    )
     try:
         signing_key = client.get_signing_key_from_jwt(token)
     except jwt.exceptions.PyJWKClientError as exc:

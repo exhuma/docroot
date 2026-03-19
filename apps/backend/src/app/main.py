@@ -55,6 +55,12 @@ def _make_lifespan(settings: Settings):
             _log.info(
                 "JWKS endpoint: %s", settings.oauth_jwks_url
             )
+            if not settings.oauth_verify_ssl:
+                _log.warning(
+                    "DOCROOT_OAUTH_VERIFY_SSL=false — "
+                    "TLS verification for the JWKS endpoint is "
+                    "DISABLED. Do not use this setting in production."
+                )
         yield
         _log.info("Docroot API shutting down")
 
