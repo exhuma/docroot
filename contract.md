@@ -313,6 +313,9 @@ Requirements:
 No session storage.
 Stateless only.
 
+A stateless browser cookie carrying a JWT for nginx auth bridging is
+permitted. This does not constitute server-side session storage.
+
 ---
 
 # 10. Static Hosting Rules
@@ -374,6 +377,16 @@ UI internationalization:
 
 UI must rely entirely on REST API.
 No filesystem assumptions.
+
+### OIDC UI Mode
+
+When OIDC login is enabled:
+
+* The browser UI acts as a separate OIDC public client.
+* The UI uses Authorization Code + PKCE.
+* The API remains a stateless JWT resource server.
+* Any cookie used for docs access is a stateless browser-to-nginx
+  bridge and not server-side session storage.
 
 ---
 
