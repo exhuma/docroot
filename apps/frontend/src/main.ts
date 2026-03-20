@@ -26,14 +26,20 @@ registerPlugins(app)
 // Initialise the OIDC UserManager before mounting so that it is
 // available synchronously in component onMounted hooks.
 //
-// The silent-renew iframe (``/oidc-silent``) also runs this file,
-// so we must NOT call trySigninSilent() there — doing so would
-// spawn another iframe, causing an infinite reload loop.
+// Mount the app immediately after initialisation so the first
+// render is not delayed by network-bound silent auth recovery.
+// trySigninSilent() then runs in the background.
+//
+// Skip silent sign-in on ``/oidc-callback`` (the callback page
+// completes the flow itself) and on ``/oidc-silent`` (the
+// silent-renew iframe — calling it there would spawn a new
+// iframe, causing an infinite reload loop).
 initOidc()
   .catch(() => undefined)
-  .then(async () => {
-    if (window.location.pathname !== '/oidc-silent') {
-      await trySigninSilent()
-    }
+  .then(() => {
     app.mount('#app')
+    const path = window.location.pathname
+    if (path !== '/oidc-callback' && path !== '/oidc-silent') {
+      trySigninSilent().catch(() => undefined)
+    }
   })
