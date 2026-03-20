@@ -98,13 +98,20 @@ env:
 
 ## OIDC Authentication
 
-Docroot uses a **two-client** architecture:
+Docroot uses a **three-layer** authentication architecture:
 
-- **Back-end (resource server)** — validates Bearer tokens via
-  JWKS.  No user redirect; pure JWT verification.
-- **Front-end (public client)** — drives the browser
-  [Authorization Code + PKCE](https://oauth.net/2/pkce/) flow
-  via `oidc-client-ts`.
+- **UI (public client)** — the single-page application performs an
+  [Authorization Code + PKCE](https://oauth.net/2/pkce/) flow via
+  `oidc-client-ts`.  No client secret is used.
+- **API (resource server)** — the FastAPI backend validates Bearer
+  tokens by verifying their signature against the JWKS endpoint.
+  It does not redirect users; it only accepts or rejects tokens.
+- **Session cookie (docs bridge)** — after login the UI exchanges
+  the access token for an `HttpOnly` session cookie via
+  `POST /api/auth/session`.  nginx uses this cookie with
+  `auth_request` to gate access to served documentation.  It is
+  **not** a server-side session; the cookie carries no state —
+  the backend re-validates the token on every `auth_request` call.
 
 Configure both clients for every IDP:
 
@@ -118,8 +125,13 @@ DOCROOT_OIDC_ISSUER=https://<idp>
 DOCROOT_OIDC_CLIENT_ID=<public-client-id>
 ```
 
-Register `https://<your-host>/oidc-callback` as the redirect
-URI at your IDP.  No client secret is needed (PKCE only).
+Register the following redirect URIs at your IDP.  No client
+secret is needed (PKCE only).
+
+| Path | Purpose |
+|---|---|
+| `https://<your-host>/oidc-callback` | Full authorization-code redirect after login |
+| `https://<your-host>/oidc-silent` | Silent-renew iframe callback |
 
 ### Audience validation
 
@@ -155,7 +167,9 @@ DOCROOT_OAUTH_AUDIENCE=docroot-api
 
 1. **Clients → Create client**; Client ID: `docroot-ui`
 2. Client authentication: **OFF**
-3. Valid redirect URIs: `https://docroot.example.com/oidc-callback`
+3. Valid redirect URIs:
+   - `https://docroot.example.com/oidc-callback`
+   - `https://docroot.example.com/oidc-silent`
 4. Web origins: `https://docroot.example.com`
 
 ```shell
@@ -199,7 +213,8 @@ The trade-off is a small amount of manual configuration.
 
 1. **Azure AD → App registrations → New registration**
 2. Redirect URI type: **Single-page application (SPA)**;
-   value: `https://docroot.example.com/oidc-callback`
+   values: `https://docroot.example.com/oidc-callback` and
+   `https://docroot.example.com/oidc-silent`
 3. Note the **Application (client) ID** and **Directory
    (tenant) ID**.
 
@@ -234,9 +249,10 @@ DOCROOT_OIDC_CLIENT_ID=<google-client-id>
 
 In the [Google Cloud Console](https://console.cloud.google.com):
 **APIs & Services → Credentials → OAuth client ID**;
-application type **Web application**; add
-`https://docroot.example.com/oidc-callback` as an authorised
-redirect URI.
+application type **Web application**; add both
+`https://docroot.example.com/oidc-callback` and
+`https://docroot.example.com/oidc-silent` as authorised
+redirect URIs.
 
 ---
 

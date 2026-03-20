@@ -44,8 +44,15 @@ export const currentUser = ref<User | null>(null)
 
 // On module load, sync an existing token to the session cookie so
 // that iframe navigations work after a page refresh.
+// Skip if the token is already expired to avoid unnecessary backend
+// calls on startup with stale credentials.
 if (token.value) {
-  api.createSession(token.value).catch(() => undefined)
+  if (isTokenExpired(token.value)) {
+    localStorage.removeItem(STORAGE_KEY)
+    token.value = null
+  } else {
+    api.createSession(token.value).catch(() => undefined)
+  }
 }
 
 /**
@@ -82,6 +89,27 @@ function parseJwtPayload (
   } catch {
     return null
   }
+}
+
+/**
+ * Return true when the JWT ``exp`` claim is in the past.
+ *
+ * Tokens without an ``exp`` claim are considered non-expired so
+ * that manually-issued development tokens continue to work.
+ *
+ * @param jwt - Encoded JWT string.
+ * @returns True when the token has a numeric ``exp`` in the past.
+ */
+function isTokenExpired (jwt: string): boolean {
+  const payload = parseJwtPayload(jwt)
+  if (!payload) {
+    return true
+  }
+  const exp = payload.exp
+  if (typeof exp !== 'number') {
+    return false
+  }
+  return Date.now() / 1000 >= exp
 }
 
 /**
@@ -165,7 +193,9 @@ export async function initOidc (): Promise<UserManager | null> {
  * loop.  ``initOidc()`` must have been called first.
  *
  * State is updated via the ``addUserLoaded`` event handler when
- * the silent login succeeds.
+ * the silent login succeeds.  When silent login fails and a stale
+ * token remains in storage, it is cleared to prevent expired
+ * bearer tokens from being sent on subsequent requests.
  */
 export async function trySigninSilent (): Promise<void> {
   if (!_userManager) {
@@ -174,7 +204,11 @@ export async function trySigninSilent (): Promise<void> {
   try {
     await _userManager.signinSilent()
   } catch {
-    // No existing SSO session — user must log in explicitly.
+    // No existing SSO session.  Clear any expired token to avoid
+    // sending stale bearer credentials to the backend.
+    if (token.value && isTokenExpired(token.value)) {
+      applyToken(null)
+    }
   }
 }
 
