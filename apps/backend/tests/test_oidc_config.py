@@ -3,6 +3,7 @@
 Verifies that the endpoint correctly exposes OIDC configuration
 from application settings.
 """
+
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -37,9 +38,7 @@ def test_oidc_config_returns_issuer_and_client_id(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["issuer"] == (
-        "https://idp.example.com/realms/demo"
-    )
+    assert body["issuer"] == ("https://idp.example.com/realms/demo")
     assert body["client_id"] == "docroot-ui"
 
 

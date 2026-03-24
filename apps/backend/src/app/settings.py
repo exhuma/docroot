@@ -3,6 +3,7 @@
 Uses pydantic-settings so all configuration is validated at startup.
 All variables are prefixed with DOCROOT_.
 """
+
 from functools import lru_cache
 
 from pydantic import Field

@@ -9,6 +9,7 @@ the cookie.
 POST /api/auth/session  — set cookie
 DELETE /api/auth/session — clear cookie
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -25,9 +26,7 @@ _SESSION_COOKIE = "session"
 # Browsers reject SameSite=Strict cookies sent in the first
 # cross-site navigation; Lax allows top-level navigations while
 # still blocking CSRF on state-changing requests.
-_COOKIE_ATTRS = (
-    "HttpOnly; SameSite=Lax; Path=/; Max-Age=86400"
-)
+_COOKIE_ATTRS = "HttpOnly; SameSite=Lax; Path=/; Max-Age=86400"
 
 
 @router.post("/session", status_code=200)
@@ -56,8 +55,7 @@ async def create_session(
     parts = auth_header.split(" ", 1)
     if len(parts) != 2 or parts[0].lower() != "bearer":
         _log.warning(
-            "Session exchange rejected: missing/malformed "
-            "Authorization header"
+            "Session exchange rejected: missing/malformed Authorization header"
         )
         raise HTTPException(
             status_code=401,
@@ -72,18 +70,14 @@ async def create_session(
 
     token = parts[1]
     ctx = validate_token(token, settings)
-    _log.debug(
-        "Session cookie issued for sub=%s", ctx.subject
-    )
+    _log.debug("Session cookie issued for sub=%s", ctx.subject)
 
     attrs = _COOKIE_ATTRS
     if settings.cookie_secure:
         attrs += "; Secure"
 
     response = JSONResponse({"ok": True})
-    response.headers["Set-Cookie"] = (
-        f"{_SESSION_COOKIE}={token}; {attrs}"
-    )
+    response.headers["Set-Cookie"] = f"{_SESSION_COOKIE}={token}; {attrs}"
     return response
 
 
@@ -100,14 +94,10 @@ async def delete_session(
     :returns: JSON ``{"ok": true}`` with cookie-clearing
         ``Set-Cookie`` header.
     """
-    attrs = (
-        "HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
-    )
+    attrs = "HttpOnly; SameSite=Lax; Path=/; Max-Age=0"
     if settings.cookie_secure:
         attrs += "; Secure"
 
     response = JSONResponse({"ok": True})
-    response.headers["Set-Cookie"] = (
-        f"{_SESSION_COOKIE}=; {attrs}"
-    )
+    response.headers["Set-Cookie"] = f"{_SESSION_COOKIE}=; {attrs}"
     return response

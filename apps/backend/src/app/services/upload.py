@@ -3,6 +3,7 @@
 Orchestrates ZIP validation, extraction to a temporary directory,
 metadata generation, and atomic installation via the storage layer.
 """
+
 import shutil
 import stat
 import tempfile
@@ -50,9 +51,7 @@ async def install_upload(
     :raises HTTPException: 422 for invalid ZIP; 409 for conflicts.
     """
     if upload_timestamp is None:
-        upload_timestamp = (
-            datetime.now(timezone.utc).isoformat()
-        )
+        upload_timestamp = datetime.now(timezone.utc).isoformat()
 
     _log.info(
         "Upload started: %s/%s/%s/%s by %s",
@@ -74,17 +73,14 @@ async def install_upload(
             validate_zip(zip_path)
         except ValueError as exc:
             _log.warning(
-                "Upload rejected (invalid ZIP): "
-                "%s/%s/%s/%s — %s",
+                "Upload rejected (invalid ZIP): %s/%s/%s/%s — %s",
                 namespace,
                 project,
                 version,
                 locale,
                 exc,
             )
-            raise HTTPException(
-                status_code=422, detail=str(exc)
-            ) from exc
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
         extract_dir = tmpdir / "content"
         extract_dir.mkdir()

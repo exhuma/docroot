@@ -9,6 +9,7 @@ The endpoint reads the original request URI from the
 ``X-Original-URI`` header, extracts the namespace, and validates
 the caller's read permission against the namespace ACL.
 """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -41,12 +42,8 @@ def _extract_namespace(original_uri: str) -> str:
 
 @router.get("/api/auth")
 async def auth_check(
-    x_original_uri: Annotated[
-        str | None, Header(alias="X-Original-URI")
-    ] = None,
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    x_original_uri: Annotated[str | None, Header(alias="X-Original-URI")] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> Response:
@@ -89,9 +86,7 @@ async def auth_check(
         )
 
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
 
     require_read(namespace, storage, acl, auth)
     return Response(status_code=200)

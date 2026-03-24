@@ -3,6 +3,7 @@
 Provides CRUD operations for namespaces, ACL management, and
 namespace listing. Only the namespace creator may delete a namespace.
 """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,19 +15,22 @@ from app.dependencies import (
     get_storage,
     require_write,
 )
-from app.schemas import AclOut, AclRoleIn, AclRoleOut, NamespaceIn, NamespaceOut
+from app.schemas import (
+    AclFlagsIn,
+    AclOut,
+    AclRoleIn,
+    AclRoleOut,
+    NamespaceIn,
+    NamespaceOut,
+)
 from app.storage import FilesystemStorage, NamespaceNotFound
 
-router = APIRouter(
-    prefix="/api/namespaces", tags=["namespaces"]
-)
+router = APIRouter(prefix="/api/namespaces", tags=["namespaces"])
 
 
 @router.get("", response_model=list[NamespaceOut])
 async def list_namespaces(
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> list[NamespaceOut]:
@@ -76,9 +80,7 @@ async def list_namespaces(
     return result
 
 
-@router.post(
-    "", status_code=201, response_model=NamespaceOut
-)
+@router.post("", status_code=201, response_model=NamespaceOut)
 async def create_namespace(
     body: NamespaceIn,
     auth: AuthContext = Depends(get_auth),
@@ -97,10 +99,7 @@ async def create_namespace(
     :param storage: Storage instance (injected).
     :returns: Created namespace object.
     """
-    roles = [
-        {"role": r.role, "read": r.read, "write": r.write}
-        for r in body.roles
-    ]
+    roles = [{"role": r.role, "read": r.read, "write": r.write} for r in body.roles]
     storage.create_namespace(
         body.name,
         creator=auth.subject,
@@ -139,9 +138,7 @@ async def delete_namespace(
     :raises 403: If the caller is not the namespace creator.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     ns_dir = storage.namespace_dir(namespace)
     creator = acl.get_creator(ns_dir)
     if creator and auth.subject != creator:
@@ -152,14 +149,10 @@ async def delete_namespace(
     try:
         storage.delete_namespace(namespace)
     except NamespaceNotFound:
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
 
 
-@router.put(
-    "/{namespace}/acl/roles/{role}", status_code=204
-)
+@router.put("/{namespace}/acl/roles/{role}", status_code=204)
 async def upsert_namespace_role(
     namespace: str,
     role: str,
@@ -184,23 +177,15 @@ async def upsert_namespace_role(
     :raises 403: If the caller lacks write access.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
     try:
-        storage.update_namespace_acl(
-            namespace, role, body.read, body.write
-        )
+        storage.update_namespace_acl(namespace, role, body.read, body.write)
     except NamespaceNotFound:
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
 
 
-@router.delete(
-    "/{namespace}/acl/roles/{role}", status_code=204
-)
+@router.delete("/{namespace}/acl/roles/{role}", status_code=204)
 async def remove_namespace_role(
     namespace: str,
     role: str,
@@ -223,21 +208,15 @@ async def remove_namespace_role(
     :raises 403: If the caller lacks write access.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
     try:
         storage.remove_namespace_role(namespace, role)
     except NamespaceNotFound:
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
 
 
-@router.get(
-    "/{namespace}/acl", response_model=AclOut
-)
+@router.get("/{namespace}/acl", response_model=AclOut)
 async def get_namespace_acl(
     namespace: str,
     auth: AuthContext = Depends(get_auth),
@@ -262,9 +241,7 @@ async def get_namespace_acl(
     :raises 403: If the caller lacks write access.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
     meta = storage.get_namespace_meta(namespace)
     access = meta.get("access", {})
@@ -286,6 +263,37 @@ async def get_namespace_acl(
         browsable=browsable,
         roles=roles,
     )
+
+
+@router.patch("/{namespace}/acl", status_code=204)
+async def update_namespace_acl_flags(
+    namespace: str,
+    body: AclFlagsIn,
+    auth: AuthContext = Depends(get_auth),
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
+) -> None:
+    """Update the public_read and browsable flags for a namespace.
+
+    Requires write access to the namespace.
+
+    ---
+
+    :param namespace: Namespace name (path parameter).
+    :param body: New flag values.
+    :param auth: Authenticated principal (required, injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :raises 404: If the namespace does not exist.
+    :raises 403: If the caller lacks write access.
+    """
+    if not storage.namespace_exists(namespace):
+        raise HTTPException(status_code=404, detail="Namespace not found")
+    require_write(namespace, storage, acl, auth)
+    try:
+        storage.update_namespace_flags(namespace, body.public_read, body.browsable)
+    except NamespaceNotFound:
+        raise HTTPException(status_code=404, detail="Namespace not found")
 
 
 @router.patch("/{namespace}/owner", status_code=204)
@@ -311,13 +319,9 @@ async def transfer_namespace_owner(
     :raises 403: If the caller lacks write access.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
     try:
         storage.transfer_ownership(namespace, auth.subject)
     except NamespaceNotFound:
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")

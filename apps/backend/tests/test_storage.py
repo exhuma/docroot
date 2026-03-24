@@ -1,11 +1,11 @@
 """Tests for the FilesystemStorage class."""
+
 from pathlib import Path
 
 import pytest
 
 from app.storage import (
     FilesystemStorage,
-    LocaleNotFound,
     VersionConflict,
     VersionNotFound,
 )
@@ -50,9 +50,7 @@ def test_list_projects(storage: FilesystemStorage):
     assert result == ["proj1", "proj2"]
 
 
-def test_create_version_basic(
-    storage: FilesystemStorage, tmp_path: Path
-):
+def test_create_version_basic(storage: FilesystemStorage, tmp_path: Path):
     """Ensure create_version stores the locale directory."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
@@ -74,9 +72,7 @@ def test_create_version_basic(
     assert "en" in locales
 
 
-def test_create_version_conflict(
-    storage: FilesystemStorage, tmp_path: Path
-):
+def test_create_version_conflict(storage: FilesystemStorage, tmp_path: Path):
     """Ensure creating a duplicate version+locale raises conflict."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
@@ -85,8 +81,14 @@ def test_create_version_conflict(
         {"index.html": "<h1>v1</h1>"},
     )
     storage.create_version(
-        "ns", "proj", "1.0.0", "en",
-        src1, False, "user", "2024-01-01T00:00:00Z",
+        "ns",
+        "proj",
+        "1.0.0",
+        "en",
+        src1,
+        False,
+        "user",
+        "2024-01-01T00:00:00Z",
     )
     src2 = make_source_dir(
         tmp_path / "src2",
@@ -94,14 +96,18 @@ def test_create_version_conflict(
     )
     with pytest.raises(VersionConflict):
         storage.create_version(
-            "ns", "proj", "1.0.0", "en",
-            src2, False, "user", "2024-01-01T00:00:00Z",
+            "ns",
+            "proj",
+            "1.0.0",
+            "en",
+            src2,
+            False,
+            "user",
+            "2024-01-01T00:00:00Z",
         )
 
 
-def test_resolve_version_latest(
-    storage: FilesystemStorage, tmp_path: Path
-):
+def test_resolve_version_latest(storage: FilesystemStorage, tmp_path: Path):
     """Ensure resolve_version resolves the 'latest' alias."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
@@ -110,19 +116,21 @@ def test_resolve_version_latest(
         {"index.html": "<h1>Hello</h1>"},
     )
     storage.create_version(
-        "ns", "proj", "2.0", "en",
-        src, True, "user", "2024-01-01T00:00:00Z",
+        "ns",
+        "proj",
+        "2.0",
+        "en",
+        src,
+        True,
+        "user",
+        "2024-01-01T00:00:00Z",
     )
-    version, locale = storage.resolve_version(
-        "ns", "proj", "latest", "en"
-    )
+    version, locale = storage.resolve_version("ns", "proj", "latest", "en")
     assert version == "2.0"
     assert locale == "en"
 
 
-def test_resolve_locale_fallback(
-    storage: FilesystemStorage, tmp_path: Path
-):
+def test_resolve_locale_fallback(storage: FilesystemStorage, tmp_path: Path):
     """Ensure locale fallback resolves to 'en' when available."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
@@ -131,12 +139,16 @@ def test_resolve_locale_fallback(
         {"index.html": "<h1>Hello</h1>"},
     )
     storage.create_version(
-        "ns", "proj", "1.0", "en",
-        src, False, "user", "2024-01-01T00:00:00Z",
+        "ns",
+        "proj",
+        "1.0",
+        "en",
+        src,
+        False,
+        "user",
+        "2024-01-01T00:00:00Z",
     )
-    version, locale = storage.resolve_version(
-        "ns", "proj", "1.0", "fr"
-    )
+    version, locale = storage.resolve_version("ns", "proj", "1.0", "fr")
     assert version == "1.0"
     assert locale == "en"
 
@@ -151,9 +163,7 @@ def test_resolve_version_latest_not_set(
         storage.resolve_version("ns", "proj", "latest", "en")
 
 
-def test_resolve_locale_not_found(
-    storage: FilesystemStorage, tmp_path: Path
-):
+def test_resolve_locale_not_found(storage: FilesystemStorage, tmp_path: Path):
     """Ensure locale fallback picks first available locale."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
@@ -162,36 +172,46 @@ def test_resolve_locale_not_found(
         {"index.html": "<h1>Hello</h1>"},
     )
     storage.create_version(
-        "ns", "proj", "1.0", "de",
-        src, False, "user", "2024-01-01T00:00:00Z",
+        "ns",
+        "proj",
+        "1.0",
+        "de",
+        src,
+        False,
+        "user",
+        "2024-01-01T00:00:00Z",
     )
     # "fr" not present, "en" not present; "de" is fallback
-    version, locale = storage.resolve_version(
-        "ns", "proj", "1.0", "fr"
-    )
+    version, locale = storage.resolve_version("ns", "proj", "1.0", "fr")
     assert version == "1.0"
     assert locale == "de"
 
 
-def test_delete_version_updates_latest(
-    storage: FilesystemStorage, tmp_path: Path
-):
+def test_delete_version_updates_latest(storage: FilesystemStorage, tmp_path: Path):
     """Ensure deleting the latest version updates the symlink."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
-    src1 = make_source_dir(
-        tmp_path / "src1", {"index.html": "<h1>v1</h1>"}
-    )
+    src1 = make_source_dir(tmp_path / "src1", {"index.html": "<h1>v1</h1>"})
     storage.create_version(
-        "ns", "proj", "1.0", "en",
-        src1, True, "user", "2024-01-01T00:00:00Z",
+        "ns",
+        "proj",
+        "1.0",
+        "en",
+        src1,
+        True,
+        "user",
+        "2024-01-01T00:00:00Z",
     )
-    src2 = make_source_dir(
-        tmp_path / "src2", {"index.html": "<h1>v2</h1>"}
-    )
+    src2 = make_source_dir(tmp_path / "src2", {"index.html": "<h1>v2</h1>"})
     storage.create_version(
-        "ns", "proj", "2.0", "en",
-        src2, False, "user", "2024-06-01T00:00:00Z",
+        "ns",
+        "proj",
+        "2.0",
+        "en",
+        src2,
+        False,
+        "user",
+        "2024-06-01T00:00:00Z",
     )
     storage.set_latest("ns", "proj", "2.0")
     assert storage.get_latest("ns", "proj") == "2.0"
@@ -204,9 +224,8 @@ def test_create_namespace_no_creator_role(
 ):
     """Ensure create_namespace does not add creator as a role entry."""
     import tomllib
-    storage.create_namespace(
-        "ns-owner", creator="owner@example.com"
-    )
+
+    storage.create_namespace("ns-owner", creator="owner@example.com")
     ns_dir = storage.namespace_dir("ns-owner")
     with open(ns_dir / "namespace.toml", "rb") as fh:
         data = tomllib.load(fh)
@@ -219,9 +238,8 @@ def test_create_namespace_no_creator_role(
 def test_transfer_ownership(storage: FilesystemStorage):
     """Ensure transfer_ownership updates the creator field."""
     import tomllib
-    storage.create_namespace(
-        "ns-transfer", creator="original@example.com"
-    )
+
+    storage.create_namespace("ns-transfer", creator="original@example.com")
     storage.transfer_ownership("ns-transfer", "new@example.com")
     ns_dir = storage.namespace_dir("ns-transfer")
     with open(ns_dir / "namespace.toml", "rb") as fh:
@@ -234,14 +252,13 @@ def test_transfer_ownership_preserves_roles(
 ):
     """Ensure transfer_ownership preserves existing ACL roles."""
     import tomllib
+
     storage.create_namespace(
         "ns-preserve",
         creator="original@example.com",
         roles=[{"role": "editors", "read": True, "write": True}],
     )
-    storage.transfer_ownership(
-        "ns-preserve", "new@example.com"
-    )
+    storage.transfer_ownership("ns-preserve", "new@example.com")
     ns_dir = storage.namespace_dir("ns-preserve")
     with open(ns_dir / "namespace.toml", "rb") as fh:
         data = tomllib.load(fh)
@@ -255,5 +272,6 @@ def test_transfer_ownership_not_found(
 ):
     """Ensure transfer_ownership raises NamespaceNotFound."""
     from app.storage import NamespaceNotFound
+
     with pytest.raises(NamespaceNotFound):
         storage.transfer_ownership("no-such-ns", "x@example.com")

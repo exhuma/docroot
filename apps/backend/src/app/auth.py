@@ -6,18 +6,19 @@ Supports HTTP and file:// JWKS endpoints for local development.
 Provides :func:`get_optional_auth` (FastAPI dependency) and
 :func:`get_auth` (FastAPI dependency that requires authentication).
 """
+
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import httpx
 import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import PyJWK, PyJWKClient
-from pathlib import Path
 
 from app.logging import get_logger
 from app.settings import Settings, get_settings
@@ -60,7 +61,7 @@ def _get_jwks_client(
         method.
     """
     if jwks_url.startswith("file://"):
-        return _FileJWKSClient(Path(jwks_url[len("file://"):]))
+        return _FileJWKSClient(Path(jwks_url[len("file://") :]))
     if not verify_ssl:
         _log.warning(
             "DOCROOT_OAUTH_VERIFY_SSL=false — TLS certificate "
@@ -68,13 +69,9 @@ def _get_jwks_client(
             "Do not use in production.",
             jwks_url,
         )
-        return _HttpsJWKSClient(
-            jwks_url, ssl_verify=False, cache_keys=True
-        )
+        return _HttpsJWKSClient(jwks_url, ssl_verify=False, cache_keys=True)
     if ca_bundle:
-        return _HttpsJWKSClient(
-            jwks_url, ssl_verify=ca_bundle, cache_keys=True
-        )
+        return _HttpsJWKSClient(jwks_url, ssl_verify=ca_bundle, cache_keys=True)
     return PyJWKClient(jwks_url, cache_keys=True)
 
 
@@ -149,13 +146,9 @@ class _FileJWKSClient:
                 continue
             pyjwk = PyJWK(key_data)
             kid = key_data.get("kid")
-            self._keys[
-                str(kid) if kid else ""
-            ] = pyjwk
+            self._keys[str(kid) if kid else ""] = pyjwk
 
-    def get_signing_key_from_jwt(
-        self, token: str
-    ) -> PyJWK:
+    def get_signing_key_from_jwt(self, token: str) -> PyJWK:
         """Return the signing key matching the JWT's ``kid``.
 
         :param token: Encoded JWT string.
@@ -184,6 +177,7 @@ def _get_extractor(settings: Settings):
     name = settings.oauth_role_extractor
     if name == "keycloak":
         from app.extractors.keycloak import extract_roles
+
         return extract_roles
     raise ValueError(f"Unknown role extractor: {name}")
 
@@ -268,9 +262,7 @@ def validate_token(
         payload,
         {"issuer": issuer, "audience": settings.oauth_audience},
     )
-    _log.debug(
-        "Token validated: sub=%s roles=%s", subject, roles
-    )
+    _log.debug("Token validated: sub=%s roles=%s", subject, roles)
     return AuthContext(
         subject=subject,
         roles=roles,

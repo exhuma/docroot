@@ -1,4 +1,5 @@
 """Version request and response schemas."""
+
 from pydantic import BaseModel, Field
 
 

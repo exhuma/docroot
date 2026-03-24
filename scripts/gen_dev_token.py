@@ -11,6 +11,7 @@ The token is signed with the dev RSA private key at
 ``deploy/dev/dev_key.pem`` and can be verified by the backend when
 ``DOCROOT_OAUTH_JWKS_URL`` points to ``deploy/dev/jwks.json``.
 """
+
 import argparse
 import sys
 from datetime import datetime, timedelta, timezone
@@ -25,9 +26,7 @@ try:
     )
 except ImportError:
     print(
-        "Missing dependencies. Run:\n"
-        "  uv sync\n"
-        "from the apps/backend directory.",
+        "Missing dependencies. Run:\n  uv sync\nfrom the apps/backend directory.",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -35,9 +34,7 @@ except ImportError:
 
 def main() -> None:
     """Entry point: parse arguments and print the generated JWT."""
-    parser = argparse.ArgumentParser(
-        description="Generate a dev JWT token"
-    )
+    parser = argparse.ArgumentParser(description="Generate a dev JWT token")
     parser.add_argument(
         "--sub",
         default="dev-user",
@@ -46,10 +43,7 @@ def main() -> None:
     parser.add_argument(
         "--roles",
         default="editor",
-        help=(
-            "Comma-separated Keycloak realm roles. "
-            "Default: editor"
-        ),
+        help=("Comma-separated Keycloak realm roles. Default: editor"),
     )
     parser.add_argument(
         "--client",
@@ -83,36 +77,22 @@ def main() -> None:
         )
         sys.exit(1)
 
-    private_key = load_pem_private_key(
-        key_path.read_bytes(), password=None
-    )
+    private_key = load_pem_private_key(key_path.read_bytes(), password=None)
 
     now = datetime.now(timezone.utc)
-    roles = [
-        r.strip()
-        for r in args.roles.split(",")
-        if r.strip()
-    ]
+    roles = [r.strip() for r in args.roles.split(",") if r.strip()]
     payload: dict[str, object] = {
         "sub": args.sub,
         "iss": "docroot-dev",
         "aud": args.audience,
         "iat": int(now.timestamp()),
-        "exp": int(
-            (now + timedelta(days=args.days)).timestamp()
-        ),
+        "exp": int((now + timedelta(days=args.days)).timestamp()),
         "realm_access": {"roles": roles},
     }
 
     if args.client and args.client_roles:
-        client_roles = [
-            r.strip()
-            for r in args.client_roles.split(",")
-            if r.strip()
-        ]
-        payload["resource_access"] = {
-            args.client: {"roles": client_roles}
-        }
+        client_roles = [r.strip() for r in args.client_roles.split(",") if r.strip()]
+        payload["resource_access"] = {args.client: {"roles": client_roles}}
 
     token = jwt.encode(
         payload,

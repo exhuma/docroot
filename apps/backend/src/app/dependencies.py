@@ -3,6 +3,7 @@
 Centralises storage, ACL, and authorisation dependencies so that
 route modules stay thin and avoid repeating the same logic.
 """
+
 from functools import lru_cache
 
 from fastapi import HTTPException
@@ -63,8 +64,7 @@ def require_read(
     if not acl.can_read(acl_data, roles, subject):
         if auth is None:
             _log.warning(
-                "Read denied on namespace '%s': "
-                "unauthenticated",
+                "Read denied on namespace '%s': unauthenticated",
                 namespace,
             )
             raise HTTPException(
@@ -72,8 +72,7 @@ def require_read(
                 detail="Authentication required",
             )
         _log.warning(
-            "Read denied on namespace '%s': "
-            "sub=%s roles=%s",
+            "Read denied on namespace '%s': sub=%s roles=%s",
             namespace,
             auth.subject,
             auth.roles,
@@ -112,8 +111,7 @@ def require_browse(
     if not acl.can_browse(acl_data, roles, subject):
         if auth is None:
             _log.warning(
-                "Browse denied on namespace '%s': "
-                "unauthenticated",
+                "Browse denied on namespace '%s': unauthenticated",
                 namespace,
             )
             raise HTTPException(
@@ -121,8 +119,7 @@ def require_browse(
                 detail="Authentication required",
             )
         _log.warning(
-            "Browse denied on namespace '%s': "
-            "sub=%s roles=%s",
+            "Browse denied on namespace '%s': sub=%s roles=%s",
             namespace,
             auth.subject,
             auth.roles,
@@ -161,8 +158,7 @@ def require_write(
     acl_data = acl.get(ns_dir)
     if not acl.can_write(acl_data, auth.roles, auth.subject):
         _log.warning(
-            "Write denied on namespace '%s': "
-            "sub=%s roles=%s",
+            "Write denied on namespace '%s': sub=%s roles=%s",
             namespace,
             auth.subject,
             auth.roles,

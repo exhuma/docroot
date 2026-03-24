@@ -5,6 +5,7 @@ middleware and router registration happens here. Import
 ``create_app`` to instantiate the application for testing or
 production.
 """
+
 import time
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -42,20 +43,16 @@ def _make_lifespan(settings: Settings):
         """
         setup_logging(settings.log_level)
         _log.info(
-            "Docroot API starting up "
-            "(log_level=%s, data_root=%s)",
+            "Docroot API starting up (log_level=%s, data_root=%s)",
             settings.log_level,
             settings.data_root,
         )
         if not settings.oauth_jwks_url:
             _log.warning(
-                "DOCROOT_OAUTH_JWKS_URL is not set — "
-                "authentication is disabled"
+                "DOCROOT_OAUTH_JWKS_URL is not set — authentication is disabled"
             )
         else:
-            _log.info(
-                "JWKS endpoint: %s", settings.oauth_jwks_url
-            )
+            _log.info("JWKS endpoint: %s", settings.oauth_jwks_url)
             if not settings.oauth_verify_ssl:
                 _log.warning(
                     "DOCROOT_OAUTH_VERIFY_SSL=false — "
@@ -82,9 +79,7 @@ def create_app(
 
     cors_raw = settings.cors_origins
     cors_origins = (
-        ["*"]
-        if cors_raw == "*"
-        else [o.strip() for o in cors_raw.split(",")]
+        ["*"] if cors_raw == "*" else [o.strip() for o in cors_raw.split(",")]
     )
 
     application = FastAPI(
@@ -101,9 +96,7 @@ def create_app(
     )
 
     @application.middleware("http")
-    async def _log_requests(
-        request: Request, call_next
-    ):
+    async def _log_requests(request: Request, call_next):
         """Log every incoming HTTP request and its response status.
 
         :param request: Incoming HTTP request.

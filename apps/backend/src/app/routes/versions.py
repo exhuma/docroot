@@ -4,6 +4,7 @@ Handles version listing (with optional sorting by namespace
 versioning config), documentation uploads, and version/locale
 resolution with fallback logic.
 """
+
 from typing import Annotated
 
 from fastapi import (
@@ -36,16 +37,13 @@ router = APIRouter(tags=["versions"])
 
 
 @router.get(
-    "/api/namespaces/{namespace}/projects/{project}"
-    "/versions",
+    "/api/namespaces/{namespace}/projects/{project}/versions",
     response_model=list[VersionOut],
 )
 async def list_versions(
     namespace: str,
     project: str,
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> list[VersionOut]:
@@ -69,13 +67,9 @@ async def list_versions(
     :raises 404: If the namespace or project does not exist.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     if not storage.project_exists(namespace, project):
-        raise HTTPException(
-            status_code=404, detail="Project not found"
-        )
+        raise HTTPException(status_code=404, detail="Project not found")
     require_browse(namespace, storage, acl, auth)
     versions = storage.list_versions(namespace, project)
     ns_meta = storage.get_namespace_meta(namespace)
@@ -97,17 +91,14 @@ async def list_versions(
 
 
 @router.get(
-    "/api/namespaces/{namespace}/projects/{project}"
-    "/versions/{version}/locales",
+    "/api/namespaces/{namespace}/projects/{project}/versions/{version}/locales",
     response_model=list[str],
 )
 async def list_locales(
     namespace: str,
     project: str,
     version: str,
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> list[str]:
@@ -127,16 +118,13 @@ async def list_locales(
     :raises 404: If the namespace does not exist.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     require_browse(namespace, storage, acl, auth)
     return storage.list_locales(namespace, project, version)
 
 
 @router.post(
-    "/api/namespaces/{namespace}/projects/{project}"
-    "/upload",
+    "/api/namespaces/{namespace}/projects/{project}/upload",
     status_code=201,
 )
 async def upload_version(
@@ -146,15 +134,9 @@ async def upload_version(
     version: Annotated[str, Form(...)],
     locale: Annotated[str, Form(...)],
     latest: Annotated[bool, Form()] = False,
-    uploader_subject: Annotated[
-        str | None, Form()
-    ] = None,
-    upload_timestamp: Annotated[
-        str | None, Form()
-    ] = None,
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    uploader_subject: Annotated[str | None, Form()] = None,
+    upload_timestamp: Annotated[str | None, Form()] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> dict[str, str]:
@@ -186,18 +168,12 @@ async def upload_version(
     :raises 409: If the version+locale already exists.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     if not storage.project_exists(namespace, project):
-        raise HTTPException(
-            status_code=404, detail="Project not found"
-        )
+        raise HTTPException(status_code=404, detail="Project not found")
     require_write(namespace, storage, acl, auth)
 
-    subject = uploader_subject or (
-        auth.subject if auth else ""
-    )
+    subject = uploader_subject or (auth.subject if auth else "")
     await install_upload(
         file=file,
         namespace=namespace,
@@ -213,8 +189,7 @@ async def upload_version(
 
 
 @router.delete(
-    "/api/namespaces/{namespace}/projects/{project}"
-    "/versions/{version}/{locale}",
+    "/api/namespaces/{namespace}/projects/{project}/versions/{version}/{locale}",
     status_code=204,
 )
 async def delete_version(
@@ -222,9 +197,7 @@ async def delete_version(
     project: str,
     version: str,
     locale: str,
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> None:
@@ -248,14 +221,10 @@ async def delete_version(
         exist.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
     try:
-        storage.delete_version(
-            namespace, project, version, locale
-        )
+        storage.delete_version(namespace, project, version, locale)
     except VersionNotFound:
         raise HTTPException(
             status_code=404,
@@ -264,17 +233,14 @@ async def delete_version(
 
 
 @router.put(
-    "/api/namespaces/{namespace}/projects/{project}"
-    "/versions/{version}/latest",
+    "/api/namespaces/{namespace}/projects/{project}/versions/{version}/latest",
     status_code=204,
 )
 async def set_latest(
     namespace: str,
     project: str,
     version: str,
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> None:
@@ -296,25 +262,18 @@ async def set_latest(
         found.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     if not storage.project_exists(namespace, project):
-        raise HTTPException(
-            status_code=404, detail="Project not found"
-        )
+        raise HTTPException(status_code=404, detail="Project not found")
     require_write(namespace, storage, acl, auth)
     versions = storage.list_versions(namespace, project)
     if version not in versions:
-        raise HTTPException(
-            status_code=404, detail="Version not found"
-        )
+        raise HTTPException(status_code=404, detail="Version not found")
     storage.set_latest(namespace, project, version)
 
 
 @router.get(
-    "/api/namespaces/{namespace}/projects/{project}"
-    "/resolve/{version}/{locale}",
+    "/api/namespaces/{namespace}/projects/{project}/resolve/{version}/{locale}",
     response_model=ResolveOut,
 )
 async def resolve_endpoint(
@@ -322,9 +281,7 @@ async def resolve_endpoint(
     project: str,
     version: str,
     locale: str,
-    auth: Annotated[
-        AuthContext | None, Depends(get_optional_auth)
-    ] = None,
+    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
 ) -> ResolveOut:
@@ -350,20 +307,14 @@ async def resolve_endpoint(
         resolved.
     """
     if not storage.namespace_exists(namespace):
-        raise HTTPException(
-            status_code=404, detail="Namespace not found"
-        )
+        raise HTTPException(status_code=404, detail="Namespace not found")
     require_browse(namespace, storage, acl, auth)
     try:
-        resolved_version, resolved_locale = (
-            storage.resolve_version(
-                namespace, project, version, locale
-            )
+        resolved_version, resolved_locale = storage.resolve_version(
+            namespace, project, version, locale
         )
     except (VersionNotFound, LocaleNotFound) as exc:
-        raise HTTPException(
-            status_code=404, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
     return ResolveOut(
         version=resolved_version,
         locale=resolved_locale,

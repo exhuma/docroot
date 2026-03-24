@@ -1,4 +1,5 @@
 """Tests for the logging setup module."""
+
 import logging
 
 import pytest

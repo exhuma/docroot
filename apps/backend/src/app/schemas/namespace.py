@@ -1,16 +1,15 @@
 """Namespace request and response schemas."""
+
 from typing import Annotated
 
 from pydantic import BaseModel, Field
-
 
 _NamePattern = Annotated[
     str,
     Field(
         pattern=r"^[a-z0-9][a-z0-9\-_]*$",
         description=(
-            "Lowercase alphanumeric identifier. "
-            "May contain hyphens and underscores."
+            "Lowercase alphanumeric identifier. May contain hyphens and underscores."
         ),
     ),
 ]
@@ -24,9 +23,7 @@ class AclRoleIn(BaseModel):
     :param write: Whether this role grants write access.
     """
 
-    role: str = Field(
-        description="Role name as it appears in the JWT."
-    )
+    role: str = Field(description="Role name as it appears in the JWT.")
     read: bool = Field(
         default=False,
         description="Grant read access to this role.",
@@ -48,6 +45,22 @@ class AclRoleOut(BaseModel):
     role: str
     read: bool = False
     write: bool = False
+
+
+class AclFlagsIn(BaseModel):
+    """Request body for updating namespace-level ACL flags.
+
+    :param public_read: Whether the namespace is publicly readable.
+    :param browsable: Whether unauthenticated callers may list
+        the namespace and its contents without gaining doc access.
+    """
+
+    public_read: bool = Field(description="Allow unauthenticated read access.")
+    browsable: bool = Field(
+        description=(
+            "Allow unauthenticated listing without granting documentation access."
+        )
+    )
 
 
 class AclOut(BaseModel):
@@ -80,10 +93,7 @@ class NamespaceIn(BaseModel):
     name: _NamePattern
     public_read: bool = Field(
         default=False,
-        description=(
-            "Allow unauthenticated read access to this "
-            "namespace."
-        ),
+        description=("Allow unauthenticated read access to this namespace."),
     )
     browsable: bool = Field(
         default=True,

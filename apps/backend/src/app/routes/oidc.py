@@ -6,6 +6,7 @@ without hard-coding those values into the static bundle.
 
 GET /api/oidc-config
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

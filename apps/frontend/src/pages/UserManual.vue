@@ -53,13 +53,8 @@
         <p class="font-weight-bold mb-1">
           {{ t('manualUploadCurl') }}
         </p>
-        <v-sheet
-          class="pa-3 rounded"
-          color="grey-darken-3"
-        >
-          <pre class="text-caption text-white">{{
-            curlUploadExample
-          }}</pre>
+        <v-sheet class="pa-3 rounded" color="grey-darken-3">
+          <pre class="text-caption text-white">{{ curlUploadExample }}</pre>
         </v-sheet>
       </v-card-text>
     </v-card>
@@ -75,19 +70,10 @@
         <p class="font-weight-bold mb-1">
           {{ t('manualClientCredentialsCurl') }}
         </p>
-        <v-sheet
-          class="pa-3 rounded"
-          color="grey-darken-3"
-        >
-          <pre class="text-caption text-white">{{
-            curlTokenExample
-          }}</pre>
+        <v-sheet class="pa-3 rounded" color="grey-darken-3">
+          <pre class="text-caption text-white">{{ curlTokenExample }}</pre>
         </v-sheet>
-        <v-alert
-          class="mt-4"
-          density="compact"
-          type="warning"
-        >
+        <v-alert class="mt-4" density="compact" type="warning">
           {{ t('manualClientCredentialsWarning') }}
         </v-alert>
       </v-card-text>
@@ -99,19 +85,10 @@
       </v-card-title>
       <v-card-text>
         <p class="mb-3">{{ t('manualAclText') }}</p>
-        <v-sheet
-          class="pa-3 rounded"
-          color="grey-darken-3"
-        >
-          <pre class="text-caption text-white">{{
-            aclExample
-          }}</pre>
+        <v-sheet class="pa-3 rounded" color="grey-darken-3">
+          <pre class="text-caption text-white">{{ aclExample }}</pre>
         </v-sheet>
-        <v-alert
-          class="mt-4"
-          density="compact"
-          type="info"
-        >
+        <v-alert class="mt-4" density="compact" type="info">
           {{ t('manualAclAlphaNotice') }}
         </v-alert>
       </v-card-text>
@@ -120,13 +97,13 @@
 </template>
 
 <script setup lang="ts">
-  import { useI18n } from 'vue-i18n'
-  import AuthBar from '@/components/AuthBar.vue'
-  import ProseContent from '@/components/ProseContent.vue'
+import { useI18n } from 'vue-i18n'
+import AuthBar from '@/components/AuthBar.vue'
+import ProseContent from '@/components/ProseContent.vue'
 
-  const { t } = useI18n()
+const { t } = useI18n()
 
-  const curlUploadExample = String.raw`# 1. Obtain a token via client-credentials grant
+const curlUploadExample = String.raw`# 1. Obtain a token via client-credentials grant
 TOKEN=$(curl -s -X POST \
   https://idp.example.com/realms/myrealm/\
 protocol/openid-connect/token \
@@ -145,14 +122,14 @@ projects/myproject/upload \
   -F "locale=en" \
   -F "latest=true"`
 
-  const curlTokenExample = String.raw`curl -s -X POST \
+const curlTokenExample = String.raw`curl -s -X POST \
   https://idp.example.com/realms/myrealm/\
 protocol/openid-connect/token \
   -d grant_type=client_credentials \
   -d client_id=my-ci-client \
   -d client_secret=MY_SECRET`
 
-  const aclExample = `# /data/namespaces/myns/namespace.toml
+const aclExample = `# /data/namespaces/myns/namespace.toml
 
 creator = "alice"
 versioning = "semver"

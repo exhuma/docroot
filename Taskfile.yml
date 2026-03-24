@@ -106,6 +106,13 @@ tasks:
     cmds:
       - npm run lint:fix
 
+  lint:python:
+    desc: Check Python code with ruff (lint + format check)
+    dir: apps/backend
+    cmds:
+      - uv run ruff check .
+      - uv run ruff format --check .
+
   type-check:
     desc: Run frontend TypeScript type-check
     dir: apps/frontend
@@ -123,9 +130,34 @@ tasks:
     deps:
       - test:backend
 
+  format:python:
+    desc: Auto-format Python code with ruff
+    dir: apps/backend
+    cmds:
+      - uv run ruff format .
+      - uv run ruff check --fix .
+
+  format:frontend:
+    desc: Auto-format Vue/TS/JS files with prettier
+    dir: apps/frontend
+    cmds:
+      - npm run format
+
+  format:
+    desc: Auto-format all code (Python + frontend)
+    deps:
+      - format:python
+      - format:frontend
+
+  hooks:check:
+    desc: Run all pre-commit hooks against all files
+    cmds:
+      - pre-commit run --all-files
+
   ci:
     desc: Full CI pipeline (lint + type-check + build + test)
     cmds:
+      - task: lint:python
       - task: lint
       - task: type-check
       - task: build:frontend

@@ -9,6 +9,7 @@ When sorting fails for a particular version (e.g. it does not
 match the configured pattern), that version is placed at the end
 of the list in its original position.
 """
+
 from __future__ import annotations
 
 import re
@@ -59,7 +60,7 @@ def _pep440_key(version: str) -> object:
         from packaging.version import InvalidVersion, Version
 
         return Version(version)
-    except (InvalidVersion, ImportError):
+    except InvalidVersion, ImportError:
         return version
 
 
@@ -114,9 +115,10 @@ def sort_versions(
                     InvalidVersion,
                     Version,
                 )
+
                 Version(v)
                 good.append(v)
-            except (InvalidVersion, ImportError):
+            except InvalidVersion, ImportError:
                 bad.append(v)
         try:
             good.sort(key=_pep440_key)
@@ -134,9 +136,7 @@ def sort_versions(
                 good_versions.append(v)
             else:
                 bad_versions.append(v)
-        good_versions.sort(
-            key=lambda v: _regex_key(v, pattern)
-        )
+        good_versions.sort(key=lambda v: _regex_key(v, pattern))
         return good_versions + bad_versions
     except re.error:
         return list(versions)

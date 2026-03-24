@@ -1,4 +1,5 @@
 """Tests for the ZIP upload validation logic."""
+
 import io
 import stat
 import zipfile

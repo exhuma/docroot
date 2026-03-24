@@ -5,6 +5,7 @@ files stored in the namespace directory. The cache is invalidated
 when the file's mtime changes, ensuring ACL changes are picked up
 without restarting the service.
 """
+
 import tomllib
 from pathlib import Path
 from threading import Lock
@@ -20,14 +21,10 @@ class AclCache:
 
     def __init__(self) -> None:
         """Initialise the cache with an empty state."""
-        self._cache: dict[
-            str, tuple[float, dict[str, object]]
-        ] = {}
+        self._cache: dict[str, tuple[float, dict[str, object]]] = {}
         self._lock = Lock()
 
-    def get(
-        self, namespace_dir: Path
-    ) -> dict[str, object]:
+    def get(self, namespace_dir: Path) -> dict[str, object]:
         """Return the parsed ACL data for a namespace directory.
 
         Returns a default (no-access) ACL if the file does not
@@ -40,9 +37,7 @@ class AclCache:
         try:
             mtime = toml_path.stat().st_mtime
         except FileNotFoundError:
-            return {
-                "access": {"public_read": False, "roles": []}
-            }
+            return {"access": {"public_read": False, "roles": []}}
 
         key = str(toml_path)
         with self._lock:
@@ -52,9 +47,7 @@ class AclCache:
                     return cached_data
             try:
                 with open(toml_path, "rb") as fh:
-                    data: dict[str, object] = (
-                        tomllib.load(fh)
-                    )
+                    data: dict[str, object] = tomllib.load(fh)
             except Exception:
                 return {
                     "access": {
@@ -167,9 +160,7 @@ class AclCache:
             return False
         return bool(access.get("browsable", False))
 
-    def get_creator(
-        self, namespace_dir: Path
-    ) -> str | None:
+    def get_creator(self, namespace_dir: Path) -> str | None:
         """Return the creator subject stored in the namespace TOML.
 
         :param namespace_dir: Path to the namespace directory.

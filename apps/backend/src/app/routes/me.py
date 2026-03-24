@@ -1,4 +1,5 @@
 """Current-user identity endpoint."""
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 

@@ -4,32 +4,29 @@
     bundled at build time from files under source control — no
     user-supplied input ever reaches marked.parse().
   -->
-  <div
-    class="prose-content"
-    v-html="html"
-  />
+  <div class="prose-content" v-html="html" />
 </template>
 
 <script setup lang="ts">
-  import { marked } from 'marked'
-  import { computed } from 'vue'
-  import { useI18n } from 'vue-i18n'
-  import deMd from '@/assets/content/intro.de.md?raw'
-  import enMd from '@/assets/content/intro.en.md?raw'
-  import frMd from '@/assets/content/intro.fr.md?raw'
+import { marked } from 'marked'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import deMd from '@/assets/content/intro.de.md?raw'
+import enMd from '@/assets/content/intro.en.md?raw'
+import frMd from '@/assets/content/intro.fr.md?raw'
 
-  const { locale } = useI18n()
+const { locale } = useI18n()
 
-  const sources: Record<string, string> = {
-    en: enMd,
-    fr: frMd,
-    de: deMd,
-  }
+const sources: Record<string, string> = {
+  en: enMd,
+  fr: frMd,
+  de: deMd,
+}
 
-  const html = computed(() => {
-    const src = sources[locale.value] ?? enMd
-    return marked.parse(src, { async: false }) as string
-  })
+const html = computed(() => {
+  const src = sources[locale.value] ?? enMd
+  return marked.parse(src, { async: false }) as string
+})
 </script>
 
 <style scoped>

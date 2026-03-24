@@ -11,6 +11,7 @@ Usage::
     log = get_logger(__name__)
     log.info("Application started")
 """
+
 import logging
 
 from gouge.colourcli import Simple

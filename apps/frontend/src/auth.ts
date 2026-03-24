@@ -16,19 +16,13 @@
  * OIDC configuration is fetched from ``GET /api/oidc-config``.
  */
 
-import {
-  type User,
-  UserManager,
-  type UserManagerSettings,
-} from 'oidc-client-ts'
+import { type User, UserManager, type UserManagerSettings } from 'oidc-client-ts'
 import { ref } from 'vue'
 import { api } from './api'
 
 const STORAGE_KEY = 'docroot_token'
 
-export const token = ref<string | null>(
-  localStorage.getItem(STORAGE_KEY),
-)
+export const token = ref<string | null>(localStorage.getItem(STORAGE_KEY))
 
 /**
  * ``true`` when the server has OIDC configured.  Reactive so that
@@ -66,25 +60,21 @@ let _userManager: UserManager | null = null
  *
  * @returns The singleton UserManager instance or null.
  */
-export function getUserManager (): UserManager | null {
+export function getUserManager(): UserManager | null {
   return _userManager
 }
 
 /**
  * Parse a JWT and return its decoded payload, or null on error.
  */
-function parseJwtPayload (
-  jwt: string,
-): Record<string, unknown> | null {
+function parseJwtPayload(jwt: string): Record<string, unknown> | null {
   try {
     const parts = jwt.split('.')
     if (parts.length !== 3) {
       return null
     }
     // JWTs use base64url; convert to standard base64 before decoding
-    const b64 = (parts[1] as string)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/')
+    const b64 = (parts[1] as string).replace(/-/g, '+').replace(/_/g, '/')
     return JSON.parse(atob(b64)) as Record<string, unknown>
   } catch {
     return null
@@ -100,7 +90,7 @@ function parseJwtPayload (
  * @param jwt - Encoded JWT string.
  * @returns True when the token has a numeric ``exp`` in the past.
  */
-function isTokenExpired (jwt: string): boolean {
+function isTokenExpired(jwt: string): boolean {
   const payload = parseJwtPayload(jwt)
   if (!payload) {
     return true
@@ -116,7 +106,7 @@ function isTokenExpired (jwt: string): boolean {
  * Apply a new token value to reactive state and the session cookie.
  * Passing ``null`` clears the token and invalidates the session.
  */
-function applyToken (t: string | null): void {
+function applyToken(t: string | null): void {
   token.value = t
   if (t === null) {
     localStorage.removeItem(STORAGE_KEY)
@@ -139,7 +129,7 @@ function applyToken (t: string | null): void {
  *
  * @returns Resolved UserManager, or null when OIDC is disabled.
  */
-export async function initOidc (): Promise<UserManager | null> {
+export async function initOidc(): Promise<UserManager | null> {
   try {
     const cfg = await api.getOidcConfig()
     if (!cfg.issuer || !cfg.client_id) {
@@ -160,7 +150,7 @@ export async function initOidc (): Promise<UserManager | null> {
     _userManager = new UserManager(settings)
 
     // Keep reactive state in sync with UserManager lifecycle events.
-    _userManager.events.addUserLoaded(user => {
+    _userManager.events.addUserLoaded((user) => {
       applyToken(user.access_token)
       currentUser.value = user
     })
@@ -197,7 +187,7 @@ export async function initOidc (): Promise<UserManager | null> {
  * token remains in storage, it is cleared to prevent expired
  * bearer tokens from being sent on subsequent requests.
  */
-export async function trySigninSilent (): Promise<void> {
+export async function trySigninSilent(): Promise<void> {
   if (!_userManager) {
     return
   }
@@ -218,7 +208,7 @@ export async function trySigninSilent (): Promise<void> {
  * Redirects the browser to the configured identity provider.
  * ``initOidc`` must have been called first.
  */
-export async function loginWithOidc (): Promise<void> {
+export async function loginWithOidc(): Promise<void> {
   if (_userManager) {
     await _userManager.signinRedirect()
   }
@@ -233,7 +223,7 @@ export async function loginWithOidc (): Promise<void> {
  *
  * @returns The subject (``sub``) claim of the received token.
  */
-export async function completeOidcCallback (): Promise<string> {
+export async function completeOidcCallback(): Promise<string> {
   if (!_userManager) {
     throw new Error('OIDC not initialised')
   }
@@ -248,7 +238,7 @@ export async function completeOidcCallback (): Promise<string> {
  * For OIDC sessions, removes the local user and clears the token.
  * For manual tokens, simply clears the stored value.
  */
-export async function logout (): Promise<void> {
+export async function logout(): Promise<void> {
   if (_userManager) {
     await _userManager.removeUser()
   }
@@ -256,7 +246,7 @@ export async function logout (): Promise<void> {
   currentUser.value = null
 }
 
-export function setToken (t: string | null): void {
+export function setToken(t: string | null): void {
   applyToken(t)
 }
 
@@ -265,7 +255,7 @@ export function setToken (t: string | null): void {
  *
  * @returns True when a token is stored in memory.
  */
-export function isAuthenticated (): boolean {
+export function isAuthenticated(): boolean {
   return token.value !== null
 }
 
@@ -274,7 +264,7 @@ export function isAuthenticated (): boolean {
  *
  * @returns Subject string or null when no token is present.
  */
-export function getSubject (): string | null {
+export function getSubject(): string | null {
   if (!token.value) {
     return null
   }
@@ -293,13 +283,8 @@ export function getSubject (): string | null {
  * Claim priority: ``name`` → ``preferred_username`` → ``email``
  * → ``sub``.  Returns ``null`` when not authenticated.
  */
-export function getDisplayName (): string | null {
-  const PROFILE_CLAIMS = [
-    'name',
-    'preferred_username',
-    'email',
-    'sub',
-  ] as const
+export function getDisplayName(): string | null {
+  const PROFILE_CLAIMS = ['name', 'preferred_username', 'email', 'sub'] as const
   if (currentUser.value) {
     const p = currentUser.value.profile
     for (const claim of PROFILE_CLAIMS) {
@@ -329,7 +314,7 @@ export function getDisplayName (): string | null {
  * Return the avatar URL for the currently authenticated user, or
  * null when no ``picture`` claim is present.
  */
-export function getAvatarUrl (): string | null {
+export function getAvatarUrl(): string | null {
   if (currentUser.value) {
     const pic = currentUser.value.profile.picture
     return typeof pic === 'string' ? pic : null
@@ -341,9 +326,5 @@ export function getAvatarUrl (): string | null {
   if (!payload) {
     return null
   }
-  return typeof payload.picture === 'string'
-    ? payload.picture
-    : null
+  return typeof payload.picture === 'string' ? payload.picture : null
 }
-
-

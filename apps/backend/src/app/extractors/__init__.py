@@ -3,6 +3,7 @@
 Each extractor parses the decoded token payload to return a list of
 roles for the authenticated principal. Extractors are IDP-specific.
 """
+
 from typing import Protocol
 
 

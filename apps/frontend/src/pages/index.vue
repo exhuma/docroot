@@ -3,5 +3,5 @@
 </template>
 
 <script lang="ts" setup>
-  import NamespaceList from '@/pages/NamespaceList.vue'
+import NamespaceList from '@/pages/NamespaceList.vue'
 </script>

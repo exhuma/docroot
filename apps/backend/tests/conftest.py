@@ -1,4 +1,5 @@
 """Pytest configuration and shared fixtures for backend tests."""
+
 import pytest
 
 from app.storage import FilesystemStorage

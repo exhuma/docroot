@@ -8,6 +8,7 @@ Atomic renames (``os.replace``) guarantee that partial writes are
 never visible. Per-locale ``fcntl.flock`` prevents duplicate
 concurrent uploads to the same version+locale slot.
 """
+
 import errno
 import fcntl
 import os
@@ -55,15 +56,11 @@ def _write_toml_simple(
         if isinstance(value, bool):
             lines.append(f"{key} = {str(value).lower()}")
         elif isinstance(value, str):
-            escaped = value.replace("\\", "\\\\").replace(
-                '"', '\\"'
-            )
+            escaped = value.replace("\\", "\\\\").replace('"', '\\"')
             lines.append(f'{key} = "{escaped}"')
         elif isinstance(value, (int, float)):
             lines.append(f"{key} = {value}")
-    path.write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_namespace_toml(
@@ -85,42 +82,24 @@ def _write_namespace_toml(
         this namespace and its contents without gaining doc access.
     """
     lines: list[str] = []
-    escaped_creator = creator.replace(
-        "\\", "\\\\"
-    ).replace('"', '\\"')
+    escaped_creator = creator.replace("\\", "\\\\").replace('"', '\\"')
     lines.append(f'creator = "{escaped_creator}"')
     if versioning:
-        escaped_v = versioning.replace(
-            "\\", "\\\\"
-        ).replace('"', '\\"')
+        escaped_v = versioning.replace("\\", "\\\\").replace('"', '\\"')
         lines.append(f'versioning = "{escaped_v}"')
     lines.append("")
     lines.append("[access]")
-    lines.append(
-        f"public_read = {str(public_read).lower()}"
-    )
-    lines.append(
-        f"browsable = {str(browsable).lower()}"
-    )
+    lines.append(f"public_read = {str(public_read).lower()}")
+    lines.append(f"browsable = {str(browsable).lower()}")
     for role_entry in roles:
         lines.append("")
         lines.append("[[access.roles]]")
         role_name = str(role_entry.get("role", ""))
-        escaped_role = role_name.replace(
-            "\\", "\\\\"
-        ).replace('"', '\\"')
+        escaped_role = role_name.replace("\\", "\\\\").replace('"', '\\"')
         lines.append(f'role = "{escaped_role}"')
-        lines.append(
-            "read = "
-            f"{str(bool(role_entry.get('read', False))).lower()}"
-        )
-        lines.append(
-            "write = "
-            f"{str(bool(role_entry.get('write', False))).lower()}"
-        )
-    path.write_text(
-        "\n".join(lines) + "\n", encoding="utf-8"
-    )
+        lines.append(f"read = {str(bool(role_entry.get('read', False))).lower()}")
+        lines.append(f"write = {str(bool(role_entry.get('write', False))).lower()}")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 class FilesystemStorage:
@@ -141,9 +120,7 @@ class FilesystemStorage:
             environment variable, then to ``/data``.
         """
         if data_root is None:
-            data_root = os.environ.get(
-                "DOCROOT_DATA_ROOT", "/data"
-            )
+            data_root = os.environ.get("DOCROOT_DATA_ROOT", "/data")
         self.data_root = Path(data_root)
 
     # ------------------------------------------------------------------
@@ -168,9 +145,7 @@ class FilesystemStorage:
         """
         return self._namespace_dir(namespace) / "projects"
 
-    def _project_dir(
-        self, namespace: str, project: str
-    ) -> Path:
+    def _project_dir(self, namespace: str, project: str) -> Path:
         """Return the path for a specific project.
 
         :param namespace: Namespace name.
@@ -178,30 +153,22 @@ class FilesystemStorage:
         """
         return self._projects_dir(namespace) / project
 
-    def _versions_dir(
-        self, namespace: str, project: str
-    ) -> Path:
+    def _versions_dir(self, namespace: str, project: str) -> Path:
         """Return the path to the versions directory.
 
         :param namespace: Namespace name.
         :param project: Project name.
         """
-        return (
-            self._project_dir(namespace, project) / "versions"
-        )
+        return self._project_dir(namespace, project) / "versions"
 
-    def _version_dir(
-        self, namespace: str, project: str, version: str
-    ) -> Path:
+    def _version_dir(self, namespace: str, project: str, version: str) -> Path:
         """Return the path for a specific version.
 
         :param namespace: Namespace name.
         :param project: Project name.
         :param version: Version string.
         """
-        return (
-            self._versions_dir(namespace, project) / version
-        )
+        return self._versions_dir(namespace, project) / version
 
     def _locale_path(
         self,
@@ -217,10 +184,7 @@ class FilesystemStorage:
         :param version: Version string.
         :param locale: Two-letter locale code.
         """
-        return (
-            self._version_dir(namespace, project, version)
-            / locale
-        )
+        return self._version_dir(namespace, project, version) / locale
 
     # ------------------------------------------------------------------
     # Public helpers for route-layer use
@@ -242,9 +206,7 @@ class FilesystemStorage:
         """
         return self._namespace_dir(namespace).is_dir()
 
-    def project_exists(
-        self, namespace: str, project: str
-    ) -> bool:
+    def project_exists(self, namespace: str, project: str) -> bool:
         """Return True if the project directory exists.
 
         :param namespace: Namespace name.
@@ -253,39 +215,31 @@ class FilesystemStorage:
         """
         return self._project_dir(namespace, project).is_dir()
 
-    def get_latest(
-        self, namespace: str, project: str
-    ) -> str | None:
+    def get_latest(self, namespace: str, project: str) -> str | None:
         """Return the version pointed to by the latest symlink.
 
         :param namespace: Namespace name.
         :param project: Project name.
         :returns: Version string or ``None`` if no symlink is set.
         """
-        link = (
-            self._project_dir(namespace, project) / "latest"
-        )
+        link = self._project_dir(namespace, project) / "latest"
         if link.is_symlink():
             return os.readlink(link)
         return None
 
-    def get_namespace_meta(
-        self, namespace: str
-    ) -> dict[str, object]:
+    def get_namespace_meta(self, namespace: str) -> dict[str, object]:
         """Return the raw parsed namespace.toml for a namespace.
 
         :param namespace: Namespace name.
         :returns: Parsed TOML data as a dict.
         """
-        toml_path = (
-            self._namespace_dir(namespace) / "namespace.toml"
-        )
+        toml_path = self._namespace_dir(namespace) / "namespace.toml"
         if not toml_path.exists():
             return {}
         try:
             with open(toml_path, "rb") as fh:
                 return tomllib.load(fh)
-        except (tomllib.TOMLDecodeError, OSError):
+        except tomllib.TOMLDecodeError, OSError:
             return {}
 
     # ------------------------------------------------------------------
@@ -319,9 +273,7 @@ class FilesystemStorage:
         (ns_dir / "projects").mkdir(exist_ok=True)
         toml_path = ns_dir / "namespace.toml"
         if not toml_path.exists():
-            all_roles: list[dict[str, object]] = list(
-                roles or []
-            )
+            all_roles: list[dict[str, object]] = list(roles or [])
             _write_namespace_toml(
                 toml_path,
                 creator=creator,
@@ -340,9 +292,7 @@ class FilesystemStorage:
         """
         ns_dir = self._namespace_dir(name)
         if not ns_dir.exists():
-            _log.warning(
-                "Namespace not found for deletion: %s", name
-            )
+            _log.warning("Namespace not found for deletion: %s", name)
             raise NamespaceNotFound(name)
         shutil.rmtree(ns_dir)
         _log.info("Namespace deleted: %s", name)
@@ -365,9 +315,7 @@ class FilesystemStorage:
     # Project operations
     # ------------------------------------------------------------------
 
-    def create_project(
-        self, namespace: str, project: str
-    ) -> None:
+    def create_project(self, namespace: str, project: str) -> None:
         """Create a project directory within a namespace.
 
         :param namespace: Namespace name.
@@ -376,20 +324,14 @@ class FilesystemStorage:
         """
         ns_dir = self._namespace_dir(namespace)
         if not ns_dir.exists():
-            _log.warning(
-                "Namespace not found: %s", namespace
-            )
+            _log.warning("Namespace not found: %s", namespace)
             raise NamespaceNotFound(namespace)
         proj_dir = self._project_dir(namespace, project)
         proj_dir.mkdir(parents=True, exist_ok=True)
         (proj_dir / "versions").mkdir(exist_ok=True)
-        _log.info(
-            "Project created: %s/%s", namespace, project
-        )
+        _log.info("Project created: %s/%s", namespace, project)
 
-    def delete_project(
-        self, namespace: str, project: str
-    ) -> None:
+    def delete_project(self, namespace: str, project: str) -> None:
         """Delete a project directory and all its versions.
 
         :param namespace: Namespace name.
@@ -405,9 +347,7 @@ class FilesystemStorage:
             )
             raise ProjectNotFound(project)
         shutil.rmtree(proj_dir)
-        _log.info(
-            "Project deleted: %s/%s", namespace, project
-        )
+        _log.info("Project deleted: %s/%s", namespace, project)
 
     def list_projects(self, namespace: str) -> list[str]:
         """Return a sorted list of project names in a namespace.
@@ -459,12 +399,8 @@ class FilesystemStorage:
         :raises VersionConflict: If the version+locale already
             exists.
         """
-        final_path = self._locale_path(
-            namespace, project, version, locale
-        )
-        version_dir = self._version_dir(
-            namespace, project, version
-        )
+        final_path = self._locale_path(namespace, project, version, locale)
+        version_dir = self._version_dir(namespace, project, version)
         version_dir.mkdir(parents=True, exist_ok=True)
 
         lock_path = version_dir / f".lock_{locale}"
@@ -479,10 +415,7 @@ class FilesystemStorage:
                         version,
                         locale,
                     )
-                    raise VersionConflict(
-                        f"{namespace}/{project}"
-                        f"/{version}/{locale}"
-                    )
+                    raise VersionConflict(f"{namespace}/{project}/{version}/{locale}")
 
                 uploaded_meta = source_dir / "metadata.toml"
                 if uploaded_meta.exists():
@@ -491,12 +424,8 @@ class FilesystemStorage:
                 _write_toml_simple(
                     source_dir / "metadata.toml",
                     {
-                        "upload_timestamp": (
-                            upload_timestamp or ""
-                        ),
-                        "uploader_subject": (
-                            uploader_subject or ""
-                        ),
+                        "upload_timestamp": (upload_timestamp or ""),
+                        "uploader_subject": (uploader_subject or ""),
                         "latest": latest,
                         "locale": locale,
                     },
@@ -556,20 +485,15 @@ class FilesystemStorage:
         :raises VersionNotFound: If the version+locale does not
             exist.
         """
-        locale_path = self._locale_path(
-            namespace, project, version, locale
-        )
+        locale_path = self._locale_path(namespace, project, version, locale)
         if not locale_path.exists():
-            raise VersionNotFound(
-                f"{namespace}/{project}/{version}/{locale}"
-            )
+            raise VersionNotFound(f"{namespace}/{project}/{version}/{locale}")
         shutil.rmtree(locale_path)
 
-        version_dir = self._version_dir(
-            namespace, project, version
-        )
+        version_dir = self._version_dir(namespace, project, version)
         remaining_locales = [
-            d for d in version_dir.iterdir()
+            d
+            for d in version_dir.iterdir()
             if d.is_dir() and not d.name.startswith(".")
         ]
         version_deleted = not remaining_locales
@@ -579,17 +503,11 @@ class FilesystemStorage:
             # version was removed and it was the current latest.
             # Skipping this check when no version was deleted
             # avoids an unnecessary filesystem read.
-            current_latest = self.get_latest(
-                namespace, project
-            )
+            current_latest = self.get_latest(namespace, project)
             if current_latest == version:
-                self._update_latest_after_delete(
-                    namespace, project
-                )
+                self._update_latest_after_delete(namespace, project)
 
-    def _update_latest_after_delete(
-        self, namespace: str, project: str
-    ) -> None:
+    def _update_latest_after_delete(self, namespace: str, project: str) -> None:
         """Update or remove the latest symlink after a delete.
 
         Picks the version with the most recent upload_timestamp
@@ -601,10 +519,7 @@ class FilesystemStorage:
         """
         versions = self.list_versions(namespace, project)
         if not versions:
-            link = (
-                self._project_dir(namespace, project)
-                / "latest"
-            )
+            link = self._project_dir(namespace, project) / "latest"
             try:
                 link.unlink()
             except FileNotFoundError:
@@ -614,16 +529,11 @@ class FilesystemStorage:
         best_version: str | None = None
         best_ts = ""
         for ver in versions:
-            locales = self.list_locales(
-                namespace, project, ver
-            )
+            locales = self.list_locales(namespace, project, ver)
             if not locales:
                 continue
             meta_path = (
-                self._locale_path(
-                    namespace, project, ver, locales[0]
-                )
-                / "metadata.toml"
+                self._locale_path(namespace, project, ver, locales[0]) / "metadata.toml"
             )
             try:
                 with open(meta_path, "rb") as fh:
@@ -638,18 +548,13 @@ class FilesystemStorage:
         if best_version:
             self.set_latest(namespace, project, best_version)
         else:
-            link = (
-                self._project_dir(namespace, project)
-                / "latest"
-            )
+            link = self._project_dir(namespace, project) / "latest"
             try:
                 link.unlink()
             except FileNotFoundError:
                 pass
 
-    def list_versions(
-        self, namespace: str, project: str
-    ) -> list[str]:
+    def list_versions(self, namespace: str, project: str) -> list[str]:
         """Return a sorted list of version names for a project.
 
         :param namespace: Namespace name.
@@ -665,9 +570,7 @@ class FilesystemStorage:
             if d.is_dir() and not d.name.startswith(".")
         )
 
-    def list_locales(
-        self, namespace: str, project: str, version: str
-    ) -> list[str]:
+    def list_locales(self, namespace: str, project: str, version: str) -> list[str]:
         """Return a sorted list of available locales for a version.
 
         :param namespace: Namespace name.
@@ -675,9 +578,7 @@ class FilesystemStorage:
         :param version: Version string.
         :returns: Sorted list of two-letter locale codes.
         """
-        version_dir = self._version_dir(
-            namespace, project, version
-        )
+        version_dir = self._version_dir(namespace, project, version)
         if not version_dir.exists():
             return []
         return sorted(
@@ -686,9 +587,7 @@ class FilesystemStorage:
             if d.is_dir() and not d.name.startswith(".")
         )
 
-    def set_latest(
-        self, namespace: str, project: str, version: str
-    ) -> None:
+    def set_latest(self, namespace: str, project: str, version: str) -> None:
         """Atomically update the latest symlink to *version*.
 
         :param namespace: Namespace name.
@@ -696,9 +595,7 @@ class FilesystemStorage:
         :param version: Version string to set as latest.
         """
         proj_dir = self._project_dir(namespace, project)
-        tmp_name = (
-            f".latest_{os.getpid()}_{uuid.uuid4().hex}"
-        )
+        tmp_name = f".latest_{os.getpid()}_{uuid.uuid4().hex}"
         tmp_link = proj_dir / tmp_name
         os.symlink(version, tmp_link)
         os.replace(tmp_link, proj_dir / "latest")
@@ -730,27 +627,19 @@ class FilesystemStorage:
         :raises LocaleNotFound: If no locale is available.
         """
         if version_or_alias == "latest":
-            link = (
-                self._project_dir(namespace, project)
-                / "latest"
-            )
+            link = self._project_dir(namespace, project) / "latest"
             if not link.is_symlink():
                 _log.warning(
-                    "Version not found: %s/%s latest "
-                    "(symlink not set)",
+                    "Version not found: %s/%s latest (symlink not set)",
                     namespace,
                     project,
                 )
-                raise VersionNotFound(
-                    "latest symlink is not set"
-                )
+                raise VersionNotFound("latest symlink is not set")
             version = os.readlink(link)
         else:
             version = version_or_alias
 
-        version_dir = self._version_dir(
-            namespace, project, version
-        )
+        version_dir = self._version_dir(namespace, project, version)
         if not version_dir.exists():
             _log.warning(
                 "Version not found on disk: %s/%s/%s",
@@ -765,8 +654,7 @@ class FilesystemStorage:
 
         if locale != "en" and (version_dir / "en").is_dir():
             _log.debug(
-                "Locale '%s' not found for %s/%s/%s; "
-                "falling back to 'en'",
+                "Locale '%s' not found for %s/%s/%s; falling back to 'en'",
                 locale,
                 namespace,
                 project,
@@ -781,8 +669,7 @@ class FilesystemStorage:
         )
         if available:
             _log.debug(
-                "Locale '%s' not found for %s/%s/%s; "
-                "falling back to '%s'",
+                "Locale '%s' not found for %s/%s/%s; falling back to '%s'",
                 locale,
                 namespace,
                 project,
@@ -797,10 +684,7 @@ class FilesystemStorage:
             project,
             version,
         )
-        raise LocaleNotFound(
-            f"No locale found for "
-            f"{namespace}/{project}/{version}"
-        )
+        raise LocaleNotFound(f"No locale found for {namespace}/{project}/{version}")
 
     def update_namespace_acl(
         self,
@@ -838,9 +722,7 @@ class FilesystemStorage:
             if entry.get("role") == role:
                 continue
             roles.append(dict(entry))
-        roles.append(
-            {"role": role, "read": read, "write": write}
-        )
+        roles.append({"role": role, "read": read, "write": write})
         _write_namespace_toml(
             ns_dir / "namespace.toml",
             creator=creator,
@@ -850,9 +732,7 @@ class FilesystemStorage:
             browsable=browsable,
         )
 
-    def remove_namespace_role(
-        self, namespace: str, role: str
-    ) -> None:
+    def remove_namespace_role(self, namespace: str, role: str) -> None:
         """Remove a role entry from the namespace ACL.
 
         :param namespace: Namespace name.
@@ -873,8 +753,7 @@ class FilesystemStorage:
         roles: list[dict[str, object]] = [
             dict(e)
             for e in access.get("roles", [])
-            if isinstance(e, dict)
-            and e.get("role") != role
+            if isinstance(e, dict) and e.get("role") != role
         ]
         _write_namespace_toml(
             ns_dir / "namespace.toml",
@@ -885,9 +764,44 @@ class FilesystemStorage:
             browsable=browsable,
         )
 
-    def transfer_ownership(
-        self, namespace: str, new_owner: str
+    def update_namespace_flags(
+        self,
+        namespace: str,
+        public_read: bool,
+        browsable: bool,
     ) -> None:
+        """Update the public_read and browsable flags.
+
+        Rewrites namespace.toml preserving all role entries and
+        other fields while updating only the two flag values.
+
+        :param namespace: Namespace name.
+        :param public_read: New value for the public_read flag.
+        :param browsable: New value for the browsable flag.
+        :raises NamespaceNotFound: If the namespace does not exist.
+        """
+        ns_dir = self._namespace_dir(namespace)
+        if not ns_dir.exists():
+            raise NamespaceNotFound(namespace)
+        meta = self.get_namespace_meta(namespace)
+        creator = str(meta.get("creator", ""))
+        versioning = str(meta.get("versioning", ""))
+        access = meta.get("access", {})
+        if not isinstance(access, dict):
+            access = {}
+        roles: list[dict[str, object]] = [
+            dict(e) for e in access.get("roles", []) if isinstance(e, dict)
+        ]
+        _write_namespace_toml(
+            ns_dir / "namespace.toml",
+            creator=creator,
+            public_read=public_read,
+            roles=roles,
+            versioning=versioning,
+            browsable=browsable,
+        )
+
+    def transfer_ownership(self, namespace: str, new_owner: str) -> None:
         """Transfer namespace ownership to a new owner.
 
         Rewrites namespace.toml preserving all other fields while
@@ -908,9 +822,7 @@ class FilesystemStorage:
         public_read = bool(access.get("public_read", False))
         browsable = bool(access.get("browsable", True))
         roles: list[dict[str, object]] = [
-            dict(e)
-            for e in access.get("roles", [])
-            if isinstance(e, dict)
+            dict(e) for e in access.get("roles", []) if isinstance(e, dict)
         ]
         _write_namespace_toml(
             ns_dir / "namespace.toml",

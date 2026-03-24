@@ -3,16 +3,16 @@
 Verifies that the endpoint correctly enforces namespace ACL rules
 when nginx delegates static-file authorization to FastAPI.
 """
+
 from pathlib import Path
 
-import pytest
 from fastapi.testclient import TestClient
 
+from app.acl import AclCache
 from app.dependencies import get_acl, get_storage
 from app.main import create_app
 from app.settings import Settings
 from app.storage import FilesystemStorage
-from app.acl import AclCache
 
 
 def _write_ns_toml(ns_dir: Path, content: str) -> None:
@@ -21,9 +21,7 @@ def _write_ns_toml(ns_dir: Path, content: str) -> None:
     :param ns_dir: Namespace directory path.
     :param content: TOML content to write.
     """
-    (ns_dir / "namespace.toml").write_text(
-        content, encoding="utf-8"
-    )
+    (ns_dir / "namespace.toml").write_text(content, encoding="utf-8")
 
 
 def _make_client(
@@ -52,9 +50,7 @@ def test_public_namespace_allows_unauthenticated(
 ) -> None:
     """Ensure public namespaces return 200 without credentials."""
     client, storage = _make_client(tmp_path)
-    storage.create_namespace(
-        "pubns", public_read=True
-    )
+    storage.create_namespace("pubns", public_read=True)
     ns_dir = storage.namespace_dir("pubns")
     _write_ns_toml(
         ns_dir,
@@ -73,9 +69,7 @@ def test_private_namespace_unauthenticated_returns_401(
 ) -> None:
     """Ensure private namespaces return 401 without credentials."""
     client, storage = _make_client(tmp_path)
-    storage.create_namespace(
-        "privns", public_read=False
-    )
+    storage.create_namespace("privns", public_read=False)
     ns_dir = storage.namespace_dir("privns")
     _write_ns_toml(
         ns_dir,
@@ -120,9 +114,7 @@ def test_spa_docs_path_extracts_correct_namespace(
     correct ACL.
     """
     client, storage = _make_client(tmp_path)
-    storage.create_namespace(
-        "myns", public_read=True
-    )
+    storage.create_namespace("myns", public_read=True)
     ns_dir = storage.namespace_dir("myns")
     _write_ns_toml(
         ns_dir,
@@ -131,9 +123,7 @@ def test_spa_docs_path_extracts_correct_namespace(
 
     response = client.get(
         "/api/auth",
-        headers={
-            "X-Original-URI": "/myns/proj/docs/1.0/en"
-        },
+        headers={"X-Original-URI": "/myns/proj/docs/1.0/en"},
     )
     assert response.status_code == 200
 
@@ -144,9 +134,7 @@ def test_unknown_namespace_returns_404(tmp_path: Path) -> None:
 
     response = client.get(
         "/api/auth",
-        headers={
-            "X-Original-URI": "/nosuchns/proj/1.0/en/"
-        },
+        headers={"X-Original-URI": "/nosuchns/proj/1.0/en/"},
     )
     assert response.status_code == 404
 
@@ -166,11 +154,7 @@ def test_private_namespace_session_cookie_returns_200(
     ns_dir = storage.namespace_dir("privns")
     _write_ns_toml(
         ns_dir,
-        (
-            'creator = "user@example.com"\n'
-            "[access]\n"
-            "public_read = false\n"
-        ),
+        ('creator = "user@example.com"\n[access]\npublic_read = false\n'),
     )
 
     from app.auth import AuthContext

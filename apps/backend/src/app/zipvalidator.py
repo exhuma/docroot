@@ -5,6 +5,7 @@ path-traversal and absolute-path entries, and requires a top-level
 ``index.html``. Limits are read from application settings and can
 be overridden via environment variables.
 """
+
 import stat
 import zipfile
 from pathlib import Path
@@ -36,10 +37,7 @@ def validate_zip(zip_path: Path) -> None:
         members = zf.infolist()
 
         if len(members) > max_files:
-            raise ValueError(
-                f"Archive exceeds max file count "
-                f"({max_files})"
-            )
+            raise ValueError(f"Archive exceeds max file count ({max_files})")
 
         total_size = sum(m.file_size for m in members)
         if total_size > max_bytes:
@@ -54,24 +52,16 @@ def validate_zip(zip_path: Path) -> None:
 
             parts = name.rstrip("/").split("/")
             if ".." in parts:
-                raise ValueError(
-                    f"Traversal path detected: {name}"
-                )
+                raise ValueError(f"Traversal path detected: {name}")
             if name.startswith("/"):
-                raise ValueError(
-                    f"Absolute path detected: {name}"
-                )
+                raise ValueError(f"Absolute path detected: {name}")
 
             unix_mode = member.external_attr >> 16
             if stat.S_ISLNK(unix_mode):
-                raise ValueError(
-                    f"Symlink entry detected: {name}"
-                )
+                raise ValueError(f"Symlink entry detected: {name}")
 
             if name == "index.html":
                 has_index = True
 
         if not has_index:
-            raise ValueError(
-                "Archive must contain a top-level index.html"
-            )
+            raise ValueError("Archive must contain a top-level index.html")
