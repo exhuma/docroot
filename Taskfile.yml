@@ -166,14 +166,14 @@ tasks:
   stack-up:
     desc: Bring a prod-similar stack up for local testing
     cmds:
-      - docker compose \
-        -f deploy/compose/docker-compose.yml \
-        -f deploy/compose/docker-compose.dev.yml \
+      - docker compose
+        -f deploy/compose/docker-compose.yml
+        -f deploy/compose/docker-compose.dev.yml
         up --build
 
   stack-down:
     desc: Bring the prod-similar stack for local testing down
     cmds:
-      - docker compose \
-        -f deploy/compose/docker-compose.yml \
+      - docker compose
+        -f deploy/compose/docker-compose.yml
         -f deploy/compose/docker-compose.dev.yml down

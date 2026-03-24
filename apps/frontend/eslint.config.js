@@ -1,4 +1,6 @@
-import vuetify from 'eslint-config-vuetify'
 import prettierConfig from 'eslint-config-prettier'
+import vuetify from 'eslint-config-vuetify'
 
-export default [...vuetify({ ts: true }), prettierConfig]
+// vuetify() is async; ESLint 9 awaits a Promise default export.
+// prettierConfig is appended last to disable conflicting format rules.
+export default vuetify({ ts: true }).then((configs) => [...configs, prettierConfig])
