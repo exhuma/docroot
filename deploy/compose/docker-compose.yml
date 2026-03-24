@@ -22,6 +22,12 @@ services:
     build:
       context: ../../apps
       dockerfile: nginx/Dockerfile
+      args:
+        # Injected into the frontend SPA at build time.
+        # Override via env vars (the Taskfile sets dev dummies).
+        VITE_GITHUB_REPO_URL: ${VITE_GITHUB_REPO_URL:-}
+        VITE_APP_COMMIT: ${VITE_APP_COMMIT:-}
+        VITE_APP_BUILD_TIME: ${VITE_APP_BUILD_TIME:-}
     ports:
       - "80:80"
     depends_on:

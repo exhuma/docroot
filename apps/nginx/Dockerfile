@@ -3,6 +3,10 @@ WORKDIR /app
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ .
+# Build-time metadata forwarded from docker build --build-arg.
+ARG VITE_GITHUB_REPO_URL
+ARG VITE_APP_COMMIT
+ARG VITE_APP_BUILD_TIME
 RUN npm run build-only
 
 FROM nginx:1.27-alpine

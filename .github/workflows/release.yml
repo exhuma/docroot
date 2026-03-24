@@ -54,6 +54,10 @@ jobs:
           file: apps/nginx/Dockerfile
           push: true
           tags: ${{ env.NGINX_IMAGE }}:dev-alpha
+          build-args: |
+            VITE_GITHUB_REPO_URL=https://github.com/${{ github.repository }}
+            VITE_APP_COMMIT=${{ github.sha }}
+            VITE_APP_BUILD_TIME=${{ github.event.head_commit.timestamp }}
 
   build-and-push:
     name: Build and push Docker images
@@ -121,6 +125,10 @@ jobs:
           push: true
           tags: ${{ steps.meta-nginx.outputs.tags }}
           labels: ${{ steps.meta-nginx.outputs.labels }}
+          build-args: |
+            VITE_GITHUB_REPO_URL=https://github.com/${{ github.repository }}
+            VITE_APP_COMMIT=${{ github.sha }}
+            VITE_APP_BUILD_TIME=${{ github.event.head_commit.timestamp }}
 
   create-release:
     name: Create GitHub Release

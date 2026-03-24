@@ -90,6 +90,11 @@
         <v-icon left>mdi-arrow-left</v-icon>
         {{ $t('back') }}
       </v-btn>
+
+      <!-- Build metadata: GitHub link + identicon + commit chip -->
+      <div class="docs-panel-meta">
+        <BuildMeta />
+      </div>
     </v-card-text>
   </v-card>
 </template>
@@ -100,6 +105,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type ResolveResult, type VersionInfo } from '@/api'
 import { token } from '@/auth'
+import BuildMeta from '@/components/BuildMeta.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -344,6 +350,14 @@ onUnmounted(() => {
 /** Toolbar cursor switches to grabbing while dragging. */
 .v-toolbar:active {
   cursor: grabbing !important;
+}
+
+/** Metadata section at the foot of the expanded panel. */
+.docs-panel-meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  opacity: 0.55;
 }
 
 /**

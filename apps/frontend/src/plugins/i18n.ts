@@ -108,6 +108,9 @@ const messages = {
     aclBrowsableHint:
       'Allow anyone to browse namespaces, projects and' +
       ' versions without granting documentation access.',
+    githubRepo: 'Source code',
+    buildCommit: 'Build',
+    buildTime: 'Built at',
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -211,6 +214,9 @@ const messages = {
       'Autoriser tout le monde à parcourir les espaces' +
       ' de noms, projets et versions sans accéder à' +
       ' la documentation.',
+    githubRepo: 'Code source',
+    buildCommit: 'Version du build',
+    buildTime: 'Construit le',
   },
   de: {
     namespaces: 'Namensräume',
@@ -311,6 +317,9 @@ const messages = {
       'Erlaubt jedem, Namensräume, Projekte und' +
       ' Versionen zu durchsuchen, ohne Zugriff auf' +
       ' die Dokumentation zu erhalten.',
+    githubRepo: 'Quellcode',
+    buildCommit: 'Build-Version',
+    buildTime: 'Erstellt am',
   },
 }
 
