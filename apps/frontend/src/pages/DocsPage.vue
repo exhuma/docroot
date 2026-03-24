@@ -3,6 +3,16 @@
   <iframe v-if="iframeSrc && !isDev" class="docs-frame" :src="iframeSrc" />
 
   <!--
+    Transparent shield placed over the iframe during drag.
+    iframes consume pointer events in their own document, so
+    mousemove/mouseup on the parent window stop firing the
+    moment the cursor crosses into the iframe.  This overlay
+    keeps all pointer events in the parent document for the
+    duration of the drag.
+  -->
+  <div v-if="dragging" class="docs-drag-shield" />
+
+  <!--
     Dev-server notice: static docs are served by nginx in the
     compose stack. The vite dev server has no route for those
     paths, so we show a direct link instead of a broken iframe.
@@ -108,6 +118,7 @@ const selectedLocale = ref(initLocale)
 const fallbackUsed = ref(false)
 const expanded = ref(true)
 const isDev = import.meta.env.DEV
+const dragging = ref(false)
 // v-card is a component; access the root DOM element via .$el.
 const panelEl = ref<{ $el: HTMLElement } | null>(null)
 
@@ -152,17 +163,43 @@ const panelStyle = computed(() => {
 
 let dragOffsetX = 0
 let dragOffsetY = 0
+// Panel dimensions captured at drag-start; used to clamp during onDrag
+// without querying the DOM on every mouse-move event.
+let dragPanelW = 0
+let dragPanelH = 0
 
-function onDrag(event: MouseEvent) {
-  panelPos.value = {
-    top: `${event.clientY - dragOffsetY}px`,
-    left: `${event.clientX - dragOffsetX}px`,
+/** Returns a PanelPos clamped so the panel stays fully inside the viewport. */
+function clampPos(top: number, left: number, w: number, h: number): PanelPos {
+  return {
+    top: `${Math.max(0, Math.min(top, window.innerHeight - h))}px`,
+    left: `${Math.max(0, Math.min(left, window.innerWidth - w))}px`,
     bottom: null,
     right: null,
   }
 }
 
+/**
+ * Re-clamps the panel after a viewport resize.  Only acts when the
+ * panel is in explicit top/left mode (i.e. after the first drag);
+ * the default bottom/right anchor is always within bounds by design.
+ */
+function clampPanel() {
+  if (!panelEl.value || panelPos.value.top === null) return
+  const rect = panelEl.value.$el.getBoundingClientRect()
+  panelPos.value = clampPos(rect.top, rect.left, rect.width, rect.height)
+}
+
+function onDrag(event: MouseEvent) {
+  panelPos.value = clampPos(
+    event.clientY - dragOffsetY,
+    event.clientX - dragOffsetX,
+    dragPanelW,
+    dragPanelH,
+  )
+}
+
 function stopDrag() {
+  dragging.value = false
   window.removeEventListener('mousemove', onDrag)
   window.removeEventListener('mouseup', stopDrag)
 }
@@ -172,6 +209,8 @@ function startDrag(event: MouseEvent) {
   const rect = panelEl.value.$el.getBoundingClientRect()
   dragOffsetX = event.clientX - rect.left
   dragOffsetY = event.clientY - rect.top
+  dragPanelW = rect.width
+  dragPanelH = rect.height
   // Snapshot current position as top/left so the panel
   // moves smoothly relative to the pointer.
   panelPos.value = {
@@ -182,6 +221,7 @@ function startDrag(event: MouseEvent) {
   }
   window.addEventListener('mousemove', onDrag)
   window.addEventListener('mouseup', stopDrag)
+  dragging.value = true
 }
 
 /** Move the panel 16 px per arrow-key press. */
@@ -200,12 +240,7 @@ function onPanelKeydown(event: KeyboardEvent) {
   const delta = moves[event.key]
   if (!delta) return
   event.preventDefault()
-  panelPos.value = {
-    top: `${top + delta[1]}px`,
-    left: `${left + delta[0]}px`,
-    bottom: null,
-    right: null,
-  }
+  panelPos.value = clampPos(top + delta[1], left + delta[0], rect.width, rect.height)
 }
 
 const versionNames = computed(() => versions.value.map((v) => v.name))
@@ -248,6 +283,7 @@ function onLocaleChange(loc: string) {
 }
 
 onMounted(async () => {
+  window.addEventListener('resize', clampPanel)
   try {
     versions.value = await api.listVersions(namespace, project, token.value)
   } catch (error_) {
@@ -257,6 +293,7 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', clampPanel)
   stopDrag()
 })
 </script>
@@ -307,5 +344,17 @@ onUnmounted(() => {
 /** Toolbar cursor switches to grabbing while dragging. */
 .v-toolbar:active {
   cursor: grabbing !important;
+}
+
+/**
+ * Full-screen shield rendered over the iframe while dragging.
+ * Keeps pointer events in the parent document so mousemove /
+ * mouseup listeners on window continue to fire.
+ */
+.docs-drag-shield {
+  position: fixed;
+  inset: 0;
+  z-index: 9; /* below the panel (10) but above the iframe (0) */
+  cursor: grabbing;
 }
 </style>

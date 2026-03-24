@@ -1,7 +1,7 @@
 <template>
   <v-dialog
-    :model-value="modelValue"
     max-width="520"
+    :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <v-card :title="t('manageAccess')">
@@ -17,23 +17,23 @@
         <template v-else-if="!loading">
           <v-switch
             v-model="publicRead"
-            :label="t('publicRead')"
-            :hint="t('aclPublicReadHint')"
-            :loading="savingPublicRead"
-            :disabled="savingPublicRead || savingBrowsable"
             density="compact"
+            :disabled="savingPublicRead || savingBrowsable"
+            :hint="t('aclPublicReadHint')"
+            :label="t('publicRead')"
+            :loading="savingPublicRead"
             persistent-hint
             @update:model-value="saveFlags()"
           />
           <v-switch
             v-model="browsable"
-            :label="t('browsable')"
-            :hint="t('aclBrowsableHint')"
-            :loading="savingBrowsable"
-            :disabled="savingPublicRead || savingBrowsable"
-            density="compact"
-            persistent-hint
             class="mt-2"
+            density="compact"
+            :disabled="savingPublicRead || savingBrowsable"
+            :hint="t('aclBrowsableHint')"
+            :label="t('browsable')"
+            :loading="savingBrowsable"
+            persistent-hint
             @update:model-value="saveFlags()"
           />
 
@@ -99,7 +99,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { api, type AclRole } from '@/api'
+import { type AclRole, api } from '@/api'
 import { token } from '@/auth'
 
 const props = defineProps<{
@@ -162,8 +162,8 @@ async function load() {
         saving: false,
       }
     })
-  } catch (err) {
-    const msg = (err as Error).message ?? ''
+  } catch (error) {
+    const msg = (error as Error).message ?? ''
     if (msg.toLowerCase().includes('403') || msg.toLowerCase().includes('access denied')) {
       forbidden.value = true
     } else {
@@ -181,8 +181,8 @@ async function saveFlags() {
   savingBrowsable.value = true
   try {
     await api.patchAclFlags(props.namespace, publicRead.value, browsable.value, token.value)
-  } catch (err) {
-    saveError.value = (err as Error).message ?? 'Save failed'
+  } catch (error) {
+    saveError.value = (error as Error).message ?? 'Save failed'
   } finally {
     savingPublicRead.value = false
     savingBrowsable.value = false
@@ -194,13 +194,11 @@ async function save(row: Row) {
   saveError.value = null
   row.saving = true
   try {
-    if (!row.read && !row.write) {
-      await api.removeAclRole(props.namespace, row.role, token.value)
-    } else {
-      await api.upsertAclRole(props.namespace, row.role, row.read, row.write, token.value)
-    }
-  } catch (err) {
-    saveError.value = (err as Error).message ?? 'Save failed'
+    await (!row.read && !row.write
+      ? api.removeAclRole(props.namespace, row.role, token.value)
+      : api.upsertAclRole(props.namespace, row.role, row.read, row.write, token.value))
+  } catch (error) {
+    saveError.value = (error as Error).message ?? 'Save failed'
   } finally {
     row.saving = false
   }
