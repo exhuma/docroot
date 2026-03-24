@@ -4,6 +4,7 @@
     <v-toolbar-title> {{ namespace }} — {{ t('projects') }} </v-toolbar-title>
     <v-spacer />
     <AuthBar />
+    <v-progress-linear v-if="loading" location="bottom" absolute indeterminate color="primary" />
   </v-app-bar>
 
   <v-container>
@@ -23,8 +24,6 @@
 
     <v-empty-state v-else-if="!loading" :title="t('noProjects')" />
 
-    <v-progress-circular v-if="loading" indeterminate />
-
     <v-btn
       v-if="isAuthenticated()"
       class="mt-4"
@@ -39,7 +38,7 @@
   <v-dialog v-model="createDialog" max-width="400">
     <v-card :title="t('projects')">
       <v-card-text>
-        <v-text-field v-model="newName" autofocus :label="t('name')" />
+        <v-text-field v-model="newName" variant="outlined" autofocus :label="t('name')" />
       </v-card-text>
       <v-card-actions>
         <v-spacer />

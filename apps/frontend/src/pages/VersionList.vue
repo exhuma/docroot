@@ -7,6 +7,7 @@
       {{ t('upload') }}
     </v-btn>
     <AuthBar />
+    <v-progress-linear v-if="loading" location="bottom" absolute indeterminate color="primary" />
   </v-app-bar>
 
   <v-container>
@@ -54,8 +55,6 @@
     </v-row>
 
     <v-empty-state v-else-if="!loading" :title="t('noVersions')" />
-
-    <v-progress-circular v-if="loading" indeterminate />
   </v-container>
 
   <UploadDialog

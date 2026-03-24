@@ -13,6 +13,7 @@
       style="max-width: 120px"
     />
     <AuthBar />
+    <v-progress-linear v-if="loading" location="bottom" absolute indeterminate color="primary" />
   </v-app-bar>
 
   <v-container>
@@ -73,8 +74,6 @@
       {{ t('hiddenNamespacesNotice') }}
     </v-alert>
 
-    <v-progress-circular v-if="loading" indeterminate />
-
     <v-btn class="mt-4" color="primary" prepend-icon="mdi-plus" @click="createDialog = true">
       {{ t('create') }}
     </v-btn>
@@ -83,7 +82,7 @@
   <v-dialog v-model="createDialog" max-width="400">
     <v-card :title="t('namespaces')">
       <v-card-text>
-        <v-text-field v-model="newName" autofocus :label="t('name')" />
+        <v-text-field v-model="newName" variant="outlined" autofocus :label="t('name')" />
         <v-checkbox v-model="newPublicRead" :label="t('publicRead')" />
         <v-alert v-if="!isAuthenticated()" density="compact" type="warning">
           {{ t('loginRequired') }}
