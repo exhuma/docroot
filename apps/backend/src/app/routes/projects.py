@@ -11,7 +11,7 @@ from app.auth import AuthContext, get_optional_auth
 from app.dependencies import (
     get_acl,
     get_storage,
-    require_read,
+    require_browse,
     require_write,
 )
 from app.schemas import ProjectIn, ProjectOut
@@ -55,7 +55,7 @@ async def list_projects(
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    require_read(namespace, storage, acl, auth)
+    require_browse(namespace, storage, acl, auth)
     try:
         names = storage.list_projects(namespace)
     except NamespaceNotFound:

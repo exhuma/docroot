@@ -14,7 +14,7 @@ from app.dependencies import (
     get_storage,
     require_write,
 )
-from app.schemas import AclRoleIn, NamespaceIn, NamespaceOut
+from app.schemas import AclOut, AclRoleIn, AclRoleOut, NamespaceIn, NamespaceOut
 from app.storage import FilesystemStorage, NamespaceNotFound
 
 router = APIRouter(
@@ -49,7 +49,7 @@ async def list_namespaces(
     for name in storage.list_namespaces():
         ns_dir = storage.namespace_dir(name)
         acl_data = acl.get(ns_dir)
-        if acl.can_read(acl_data, roles, subject):
+        if acl.can_browse(acl_data, roles, subject):
             meta = storage.get_namespace_meta(name)
             access = meta.get("access", {})
             public_read = (
@@ -57,12 +57,18 @@ async def list_namespaces(
                 if isinstance(access, dict)
                 else False
             )
+            browsable = (
+                bool(access.get("browsable", True))
+                if isinstance(access, dict)
+                else True
+            )
             versioning = str(meta.get("versioning", ""))
             creator = str(meta.get("creator", ""))
             result.append(
                 NamespaceOut(
                     name=name,
                     public_read=public_read,
+                    browsable=browsable,
                     versioning=versioning,
                     creator=creator,
                 )
@@ -101,10 +107,12 @@ async def create_namespace(
         public_read=body.public_read,
         roles=roles,
         versioning=body.versioning,
+        browsable=body.browsable,
     )
     return NamespaceOut(
         name=body.name,
         public_read=body.public_read,
+        browsable=body.browsable,
         versioning=body.versioning,
         creator=auth.subject,
     )
@@ -225,6 +233,59 @@ async def remove_namespace_role(
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
+
+
+@router.get(
+    "/{namespace}/acl", response_model=AclOut
+)
+async def get_namespace_acl(
+    namespace: str,
+    auth: AuthContext = Depends(get_auth),
+    storage: FilesystemStorage = Depends(get_storage),
+    acl: AclCache = Depends(get_acl),
+) -> AclOut:
+    """Return the ACL for a namespace.
+
+    Requires write access to the namespace.  Only principals
+    that can already modify the ACL may read it, preventing
+    role enumeration by read-only users.
+
+    ---
+
+    :param namespace: Namespace name (path parameter).
+    :param auth: Authenticated principal (required, injected).
+    :param storage: Storage instance (injected).
+    :param acl: ACL cache instance (injected).
+    :returns: Current ACL data including all role entries.
+    :raises 404: If the namespace does not exist.
+    :raises 401: If the caller is not authenticated.
+    :raises 403: If the caller lacks write access.
+    """
+    if not storage.namespace_exists(namespace):
+        raise HTTPException(
+            status_code=404, detail="Namespace not found"
+        )
+    require_write(namespace, storage, acl, auth)
+    meta = storage.get_namespace_meta(namespace)
+    access = meta.get("access", {})
+    if not isinstance(access, dict):
+        access = {}
+    public_read = bool(access.get("public_read", False))
+    browsable = bool(access.get("browsable", True))
+    roles = [
+        AclRoleOut(
+            role=str(e.get("role", "")),
+            read=bool(e.get("read", False)),
+            write=bool(e.get("write", False)),
+        )
+        for e in access.get("roles", [])
+        if isinstance(e, dict)
+    ]
+    return AclOut(
+        public_read=public_read,
+        browsable=browsable,
+        roles=roles,
+    )
 
 
 @router.patch("/{namespace}/owner", status_code=204)

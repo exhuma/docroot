@@ -3,6 +3,7 @@ const BASE = '/api'
 export interface Namespace {
   name: string
   public_read: boolean
+  browsable: boolean
   versioning: string
   creator: string
 }
@@ -26,6 +27,23 @@ export interface ResolveResult {
 export interface OidcConfig {
   issuer: string | null
   client_id: string | null
+}
+
+export interface AclRole {
+  role: string
+  read: boolean
+  write: boolean
+}
+
+export interface AclData {
+  public_read: boolean
+  browsable: boolean
+  roles: AclRole[]
+}
+
+export interface Me {
+  subject: string
+  roles: string[]
 }
 
 async function handleResponse (res: Response): Promise<unknown> {
@@ -218,6 +236,60 @@ export const api = {
       },
     )
     await handleResponse(res)
+  },
+
+  async getAcl (
+    ns: string,
+    token: string,
+  ): Promise<AclData> {
+    const res = await fetch(`${nsBase(ns)}/acl`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return handleResponse(res) as Promise<AclData>
+  },
+
+  async upsertAclRole (
+    ns: string,
+    role: string,
+    read: boolean,
+    write: boolean,
+    token: string,
+  ): Promise<void> {
+    const res = await fetch(
+      `${nsBase(ns)}/acl/roles/${encodeURIComponent(role)}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ read, write, role }),
+      },
+    )
+    await handleResponse(res)
+  },
+
+  async removeAclRole (
+    ns: string,
+    role: string,
+    token: string,
+  ): Promise<void> {
+    const res = await fetch(
+      `${nsBase(ns)}/acl/roles/${encodeURIComponent(role)}`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    )
+    await handleResponse(res)
+  },
+
+  /** Return the subject and roles of the authenticated caller. */
+  async getMe (token: string): Promise<Me> {
+    const res = await fetch(`${BASE}/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return handleResponse(res) as Promise<Me>
   },
 
   /**

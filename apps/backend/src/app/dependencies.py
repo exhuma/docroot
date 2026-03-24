@@ -80,7 +80,56 @@ def require_read(
         )
         raise HTTPException(
             status_code=403,
-            detail="Read permission denied",
+            detail="Access denied",
+        )
+
+
+def require_browse(
+    namespace: str,
+    storage: FilesystemStorage,
+    acl: AclCache,
+    auth: AuthContext | None,
+) -> None:
+    """Assert that the caller may browse (list) *namespace*.
+
+    Passes when :func:`require_read` would pass, or when the
+    namespace has ``browsable = true`` in its ACL.  Browsable
+    access does **not** grant access to documentation files —
+    the nginx auth-request gate still enforces read access for
+    static file serving.
+
+    :param namespace: Namespace name.
+    :param storage: Storage instance.
+    :param acl: ACL cache instance.
+    :param auth: Optional authenticated principal.
+    :raises HTTPException: 401 if unauthenticated and not
+        browsable; 403 if authenticated but access denied.
+    """
+    ns_dir = storage.namespace_dir(namespace)
+    acl_data = acl.get(ns_dir)
+    roles = auth.roles if auth else []
+    subject = auth.subject if auth else ""
+    if not acl.can_browse(acl_data, roles, subject):
+        if auth is None:
+            _log.warning(
+                "Browse denied on namespace '%s': "
+                "unauthenticated",
+                namespace,
+            )
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required",
+            )
+        _log.warning(
+            "Browse denied on namespace '%s': "
+            "sub=%s roles=%s",
+            namespace,
+            auth.subject,
+            auth.roles,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Access denied",
         )
 
 
@@ -120,5 +169,5 @@ def require_write(
         )
         raise HTTPException(
             status_code=403,
-            detail="Write permission denied",
+            detail="Access denied",
         )

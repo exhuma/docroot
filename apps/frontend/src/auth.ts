@@ -345,3 +345,5 @@ export function getAvatarUrl (): string | null {
     ? payload.picture
     : null
 }
+
+

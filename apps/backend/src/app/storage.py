@@ -72,6 +72,7 @@ def _write_namespace_toml(
     public_read: bool,
     roles: list[dict[str, object]],
     versioning: str = "",
+    browsable: bool = True,
 ) -> None:
     """Write the namespace.toml access-control file.
 
@@ -80,6 +81,8 @@ def _write_namespace_toml(
     :param public_read: Whether the namespace is publicly readable.
     :param roles: List of role dicts with 'role', 'read', 'write'.
     :param versioning: Optional versioning scheme name or regex.
+    :param browsable: Whether unauthenticated callers may list
+        this namespace and its contents without gaining doc access.
     """
     lines: list[str] = []
     escaped_creator = creator.replace(
@@ -95,6 +98,9 @@ def _write_namespace_toml(
     lines.append("[access]")
     lines.append(
         f"public_read = {str(public_read).lower()}"
+    )
+    lines.append(
+        f"browsable = {str(browsable).lower()}"
     )
     for role_entry in roles:
         lines.append("")
@@ -293,6 +299,7 @@ class FilesystemStorage:
         public_read: bool = False,
         roles: list[dict[str, object]] | None = None,
         versioning: str = "",
+        browsable: bool = True,
     ) -> None:
         """Create a namespace directory with a default ACL file.
 
@@ -304,6 +311,8 @@ class FilesystemStorage:
         :param public_read: Whether to allow public read access.
         :param roles: Additional ACL role entries.
         :param versioning: Versioning scheme name or regex string.
+        :param browsable: Whether unauthenticated callers may list
+            this namespace without gaining doc access.
         """
         ns_dir = self._namespace_dir(name)
         ns_dir.mkdir(parents=True, exist_ok=True)
@@ -319,6 +328,7 @@ class FilesystemStorage:
                 public_read=public_read,
                 roles=all_roles,
                 versioning=versioning,
+                browsable=browsable,
             )
         _log.info("Namespace created: %s", name)
 
@@ -820,6 +830,7 @@ class FilesystemStorage:
         if not isinstance(access, dict):
             access = {}
         public_read = bool(access.get("public_read", False))
+        browsable = bool(access.get("browsable", True))
         roles: list[dict[str, object]] = []
         for entry in access.get("roles", []):
             if not isinstance(entry, dict):
@@ -836,6 +847,7 @@ class FilesystemStorage:
             public_read=public_read,
             roles=roles,
             versioning=versioning,
+            browsable=browsable,
         )
 
     def remove_namespace_role(
@@ -857,6 +869,7 @@ class FilesystemStorage:
         if not isinstance(access, dict):
             access = {}
         public_read = bool(access.get("public_read", False))
+        browsable = bool(access.get("browsable", True))
         roles: list[dict[str, object]] = [
             dict(e)
             for e in access.get("roles", [])
@@ -869,6 +882,7 @@ class FilesystemStorage:
             public_read=public_read,
             roles=roles,
             versioning=versioning,
+            browsable=browsable,
         )
 
     def transfer_ownership(
@@ -892,6 +906,7 @@ class FilesystemStorage:
         if not isinstance(access, dict):
             access = {}
         public_read = bool(access.get("public_read", False))
+        browsable = bool(access.get("browsable", True))
         roles: list[dict[str, object]] = [
             dict(e)
             for e in access.get("roles", [])
@@ -903,6 +918,7 @@ class FilesystemStorage:
             public_read=public_read,
             roles=roles,
             versioning=versioning,
+            browsable=browsable,
         )
         _log.info(
             "Namespace ownership transferred: %s -> %s",

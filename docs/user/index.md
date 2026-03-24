@@ -96,12 +96,35 @@ The ZIP must satisfy:
 
 ## Access control
 
-Access is governed by `namespace.toml` on the server.  Roles
-are matched exactly against the roles in your JWT.
+Access is governed by `namespace.toml` on the server.  Role
+matching against JWT claims is case-insensitive.
 
-> **Alpha limitation:** ACL roles cannot yet be managed via
-> the API.  Ask your operator to update `namespace.toml`
-> directly.
+ACL roles can be managed via the API or through the
+**Manage Access** button (shield icon) on each namespace
+in the UI.  Write access to the namespace is required.
+
+```bash
+# Read current ACL
+curl -H "Authorization: Bearer $TOKEN" \
+  /api/namespaces/{ns}/acl
+
+# Grant a role read access
+curl -X PUT \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"read": true, "write": false}' \
+  /api/namespaces/{ns}/acl/roles/my-role
+
+# Revoke a role
+curl -X DELETE \
+  -H "Authorization: Bearer $TOKEN" \
+  /api/namespaces/{ns}/acl/roles/my-role
+```
+
+> **Note:** With a client-credentials token the service
+> account may not share roles with human users.  Use a
+> device-code flow to act on behalf of a human user when
+> you need cross-user role coverage.
 
 ---
 
@@ -117,8 +140,10 @@ when the backend is running.
 | `GET` | `/api/namespaces` | List visible namespaces |
 | `POST` | `/api/namespaces` | Create a namespace |
 | `DELETE` | `/api/namespaces/{ns}` | Delete (creator only) |
+| `GET` | `/api/namespaces/{ns}/acl` | Read ACL (write access required) |
 | `PUT` | `/api/namespaces/{ns}/acl/roles/{role}` | Add/update ACL role |
 | `DELETE` | `/api/namespaces/{ns}/acl/roles/{role}` | Remove ACL role |
+| `PATCH` | `/api/namespaces/{ns}/owner` | Transfer ownership to caller |
 | `GET` | `/api/namespaces/{ns}/projects` | List projects |
 | `POST` | `/api/namespaces/{ns}/projects` | Create a project |
 | `GET` | `/api/namespaces/{ns}/projects/{p}/versions` | List versions |

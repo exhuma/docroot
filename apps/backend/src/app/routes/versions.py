@@ -20,7 +20,7 @@ from app.auth import AuthContext, get_optional_auth
 from app.dependencies import (
     get_acl,
     get_storage,
-    require_read,
+    require_browse,
     require_write,
 )
 from app.schemas import ResolveOut, VersionOut
@@ -76,7 +76,7 @@ async def list_versions(
         raise HTTPException(
             status_code=404, detail="Project not found"
         )
-    require_read(namespace, storage, acl, auth)
+    require_browse(namespace, storage, acl, auth)
     versions = storage.list_versions(namespace, project)
     ns_meta = storage.get_namespace_meta(namespace)
     versioning = str(ns_meta.get("versioning", ""))
@@ -130,7 +130,7 @@ async def list_locales(
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    require_read(namespace, storage, acl, auth)
+    require_browse(namespace, storage, acl, auth)
     return storage.list_locales(namespace, project, version)
 
 
@@ -353,7 +353,7 @@ async def resolve_endpoint(
         raise HTTPException(
             status_code=404, detail="Namespace not found"
         )
-    require_read(namespace, storage, acl, auth)
+    require_browse(namespace, storage, acl, auth)
     try:
         resolved_version, resolved_locale = (
             storage.resolve_version(

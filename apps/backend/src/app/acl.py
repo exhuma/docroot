@@ -90,11 +90,14 @@ class AclCache:
         creator = acl.get("creator")
         if subject and creator and subject == str(creator):
             return True
+        lower_roles = [r.lower() for r in roles]
         for entry in access.get("roles", []):
             if not isinstance(entry, dict):
                 continue
+            entry_role = entry.get("role")
             if (
-                entry.get("role") in roles
+                isinstance(entry_role, str)
+                and entry_role.lower() in lower_roles
                 and entry.get("read", False)
             ):
                 return True
@@ -122,15 +125,47 @@ class AclCache:
         creator = acl.get("creator")
         if subject and creator and subject == str(creator):
             return True
+        lower_roles = [r.lower() for r in roles]
         for entry in access.get("roles", []):
             if not isinstance(entry, dict):
                 continue
+            entry_role = entry.get("role")
             if (
-                entry.get("role") in roles
+                isinstance(entry_role, str)
+                and entry_role.lower() in lower_roles
                 and entry.get("write", False)
             ):
                 return True
         return False
+
+    def can_browse(
+        self,
+        acl: dict[str, object],
+        roles: list[str],
+        subject: str = "",
+    ) -> bool:
+        """Return True if the caller may browse (list) the namespace.
+
+        Browsable namespaces are visible in listings without granting
+        access to the actual documentation files.  Returns True when
+        any of the following holds:
+
+        * :meth:`can_read` would return True (full access implies
+          browsing access), or
+        * ``access.browsable`` is ``True`` (explicit browse-only
+          grant).
+
+        :param acl: Parsed ACL data from :meth:`get`.
+        :param roles: Roles of the authenticated principal.
+        :param subject: JWT subject of the authenticated principal.
+        :returns: True if browsing is permitted.
+        """
+        if self.can_read(acl, roles, subject):
+            return True
+        access = acl.get("access")
+        if not isinstance(access, dict):
+            return False
+        return bool(access.get("browsable", False))
 
     def get_creator(
         self, namespace_dir: Path

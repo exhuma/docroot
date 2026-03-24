@@ -136,3 +136,92 @@ def test_creator_subject_mismatch_denied(
     assert not acl.can_write(
         acl_data, [], subject="OWNER@EXAMPLE.COM"
     )
+
+
+def test_role_matching_is_case_insensitive(
+    acl: AclCache, tmp_path: Path
+) -> None:
+    """Ensure role comparison ignores case on both sides."""
+    ns_dir = tmp_path / "mynamespace"
+    ns_dir.mkdir()
+    _write_toml(
+        ns_dir / "namespace.toml",
+        'creator = "owner@example.com"\n'
+        "\n[access]\npublic_read = false\n\n"
+        "[[access.roles]]\n"
+        'role = "Docroot-Editor"\nread = true\nwrite = true\n',
+    )
+    acl_data = acl.get(ns_dir)
+    # JWT carries lowercase variant; TOML stores mixed-case.
+    assert acl.can_read(
+        acl_data, ["docroot-editor"], subject="other@example.com"
+    )
+    assert acl.can_write(
+        acl_data, ["docroot-editor"], subject="other@example.com"
+    )
+    # TOML stores lowercase; JWT carries uppercase variant.
+    ns_dir2 = tmp_path / "ns2"
+    ns_dir2.mkdir()
+    _write_toml(
+        ns_dir2 / "namespace.toml",
+        'creator = "owner@example.com"\n'
+        "\n[access]\npublic_read = false\n\n"
+        "[[access.roles]]\n"
+        'role = "docroot-editor"\nread = true\nwrite = false\n',
+    )
+    acl_data2 = acl.get(ns_dir2)
+    assert acl.can_read(
+        acl_data2, ["DOCROOT-EDITOR"], subject="other@example.com"
+    )
+    assert not acl.can_write(
+        acl_data2, ["DOCROOT-EDITOR"], subject="other@example.com"
+    )
+
+
+def test_can_browse_returns_true_when_browsable(
+    acl: AclCache, tmp_path: Path
+) -> None:
+    """Ensure can_browse returns True when browsable=true."""
+    ns_dir = tmp_path / "mynamespace"
+    ns_dir.mkdir()
+    _write_toml(
+        ns_dir / "namespace.toml",
+        'creator = "owner@example.com"\n'
+        "\n[access]\npublic_read = false\nbrowsable = true\n",
+    )
+    acl_data = acl.get(ns_dir)
+    assert acl.can_browse(acl_data, [], subject="")
+
+
+def test_can_browse_false_when_not_browsable(
+    acl: AclCache, tmp_path: Path
+) -> None:
+    """Ensure can_browse returns False when browsable=false."""
+    ns_dir = tmp_path / "mynamespace"
+    ns_dir.mkdir()
+    _write_toml(
+        ns_dir / "namespace.toml",
+        'creator = "owner@example.com"\n'
+        "\n[access]\npublic_read = false\nbrowsable = false\n",
+    )
+    acl_data = acl.get(ns_dir)
+    assert not acl.can_browse(acl_data, [], subject="")
+
+
+def test_can_browse_true_when_can_read(
+    acl: AclCache, tmp_path: Path
+) -> None:
+    """Ensure can_browse returns True whenever can_read is True."""
+    ns_dir = tmp_path / "mynamespace"
+    ns_dir.mkdir()
+    # browsable=false but creator match → can_browse must still pass.
+    _write_toml(
+        ns_dir / "namespace.toml",
+        'creator = "owner@example.com"\n'
+        "\n[access]\npublic_read = false\nbrowsable = false\n",
+    )
+    acl_data = acl.get(ns_dir)
+    assert acl.can_browse(
+        acl_data, [], subject="owner@example.com"
+    )
+

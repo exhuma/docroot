@@ -47,6 +47,25 @@
           >
             {{ t('publicRead') }}
           </v-chip>
+          <v-chip
+            v-else-if="ns.browsable && !ns.public_read"
+            class="mr-2"
+            color="info"
+            density="compact"
+            size="small"
+          >
+            {{ t('browsable') }}
+          </v-chip>
+          <v-btn
+            v-if="isAuthenticated()"
+            class="mr-1"
+            density="compact"
+            icon="mdi-shield-account"
+            size="small"
+            :title="t('manageAccess')"
+            variant="text"
+            @click.prevent="openAcl(ns.name)"
+          />
           <v-btn
             v-if="isAuthenticated() && ns.creator !== currentSub"
             density="compact"
@@ -63,6 +82,16 @@
     <template v-else-if="!loading">
       <ProseContent class="mb-4" />
     </template>
+
+    <v-alert
+      v-if="!isAuthenticated()"
+      class="mt-4"
+      density="compact"
+      type="info"
+      variant="tonal"
+    >
+      {{ t('hiddenNamespacesNotice') }}
+    </v-alert>
 
     <v-progress-circular
       v-if="loading"
@@ -114,6 +143,11 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <AclDialog
+    v-model="aclDialog"
+    :namespace="aclNamespace"
+  />
 </template>
 
 <script setup lang="ts">
@@ -126,6 +160,7 @@
     isAuthenticated,
     token,
   } from '@/auth'
+  import AclDialog from '@/components/AclDialog.vue'
   import AuthBar from '@/components/AuthBar.vue'
   import ProseContent from '@/components/ProseContent.vue'
 
@@ -144,6 +179,8 @@
   const createDialog = ref(false)
   const newName = ref('')
   const newPublicRead = ref(false)
+  const aclDialog = ref(false)
+  const aclNamespace = ref('')
 
   /** Current user's subject claim, computed reactively. */
   const currentSub = computed(() => getSubject() ?? '')
@@ -201,6 +238,11 @@
     } catch (error_) {
       error.value = (error_ as Error).message
     }
+  }
+
+  function openAcl (name: string) {
+    aclNamespace.value = name
+    aclDialog.value = true
   }
 
   onMounted(load)

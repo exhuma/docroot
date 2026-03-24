@@ -278,6 +278,7 @@ versioning = "semver"
 
 [access]
 public_read = false
+browsable = true
 
 [[access.roles]]
 role = "docroot-editor"
@@ -294,12 +295,56 @@ write = false
 |---|---|
 | `creator` | `sub` claim of the creator. Only this user may delete the namespace. |
 | `versioning` | Sort scheme: `semver`, `calver`, `pep440`, or a custom regex. |
-| `access.public_read` | Allow unauthenticated read. |
-| `access.roles[].role` | Exact role name from the JWT. |
+| `access.public_read` | Allow unauthenticated read access to docs. |
+| `access.browsable` | Allow unauthenticated callers to list the namespace and its projects/versions without granting doc access (default `true`). |
+| `access.roles[].role` | Role name from the JWT. Matching is **case-insensitive**. |
 | `access.roles[].read` / `.write` | Grant read / write access. |
 
-> **Alpha limitation:** ACL roles cannot yet be managed via
-> the API.  Edit `namespace.toml` directly on the host.
+The `namespace.toml` file can be edited directly on the host
+or managed via the API (see below).  Direct edits are picked
+up automatically; the ACL cache invalidates on file-mtime
+change without requiring a restart.
+
+### ACL API
+
+All ACL mutations require a valid JWT with write access to
+the namespace.
+
+```bash
+# Read the current ACL (write access required)
+curl -H "Authorization: Bearer $TOKEN" \
+  https://docroot.example.com/api/namespaces/myns/acl
+
+# Grant a role read+write access
+curl -X PUT \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"read": true, "write": true}' \
+  https://docroot.example.com/api/namespaces/myns/acl/roles/docroot-editor
+
+# Revoke a role
+curl -X DELETE \
+  -H "Authorization: Bearer $TOKEN" \
+  https://docroot.example.com/api/namespaces/myns/acl/roles/docroot-editor
+```
+
+The **Manage Access** button (shield icon) in the UI provides
+a graphical alternative: it shows a table of the current
+user's JWT roles with toggles for read/write permissions.
+
+### Ownership transfer
+
+The `creator` field controls who may delete the namespace.
+If the original creator is no longer available, any user with
+write access can claim ownership:
+
+```bash
+curl -X PATCH \
+  -H "Authorization: Bearer $TOKEN" \
+  https://docroot.example.com/api/namespaces/myns/owner
+```
+
+After this call the caller becomes the new creator.
 
 ---
 

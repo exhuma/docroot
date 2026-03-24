@@ -97,9 +97,23 @@ const messages = {
       + ' controls who can read and write. Roles are'
       + ' matched exactly against JWT role claims.',
     manualAclAlphaNotice:
-      'Alpha limitation: ACL roles cannot be granted or'
-      + ' revoked via the API yet. Edit namespace.toml'
-      + ' directly or contact your operator.',
+      'ACL roles can be granted or revoked via the API'
+      + ' or via the Manage Access button (shield icon)'
+      + ' on each namespace.',
+    browsable: 'Browsable',
+    manageAccess: 'Manage Access',
+    hiddenNamespacesNotice:
+      'Some namespaces may be hidden. Sign in to see'
+      + ' all namespaces you have access to.',
+    aclForbidden:
+      'You do not have permission to manage access'
+      + ' for this namespace.',
+    aclNoRoles:
+      'None of your current roles appear in this'
+      + ' namespace\'s ACL.',
+    aclRoleName: 'Role',
+    aclCanRead: 'Can read',
+    aclCanWrite: 'Can write',
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -190,8 +204,24 @@ const messages = {
       'Chaque espace de noms contient un fichier'
       + ' namespace.toml qui contrôle les accès.',
     manualAclAlphaNotice:
-      'Limitation alpha : les rôles ACL ne peuvent pas'
-      + ' encore être modifiés via l\'API.',
+      'Les rôles ACL peuvent être accordés ou révoqués'
+      + ' via l\'API ou via le bouton Gérer l\'accès'
+      + ' (icône bouclier) sur chaque espace de noms.',
+    browsable: 'Consultable',
+    manageAccess: 'Gérer l\'accès',
+    hiddenNamespacesNotice:
+      'Certains espaces de noms peuvent être masqués.'
+      + ' Connectez-vous pour voir tous ceux auxquels'
+      + ' vous avez accès.',
+    aclForbidden:
+      'Vous n\'avez pas la permission de gérer'
+      + ' l\'accès à cet espace de noms.',
+    aclNoRoles:
+      'Aucun de vos rôles actuels n\'apparaît dans'
+      + ' l\'ACL de cet espace de noms.',
+    aclRoleName: 'Rôle',
+    aclCanRead: 'Peut lire',
+    aclCanWrite: 'Peut écrire',
   },
   de: {
     namespaces: 'Namensräume',
@@ -285,8 +315,24 @@ const messages = {
       'Jeder Namensraum enthält eine namespace.toml,'
       + ' die den Zugriff steuert.',
     manualAclAlphaNotice:
-      'Alpha-Einschränkung: ACL-Rollen können noch nicht'
-      + ' über die API geändert werden.',
+      'ACL-Rollen können über die API oder über die'
+      + ' Schaltfläche Zugriff verwalten (Schild-Symbol)'
+      + ' an jedem Namensraum verwaltet werden.',
+    browsable: 'Auflistbar',
+    manageAccess: 'Zugriff verwalten',
+    hiddenNamespacesNotice:
+      'Einige Namensräume können ausgeblendet sein.'
+      + ' Melden Sie sich an, um alle zugänglichen'
+      + ' Namensräume zu sehen.',
+    aclForbidden:
+      'Sie haben keine Berechtigung, den Zugriff'
+      + ' für diesen Namensraum zu verwalten.',
+    aclNoRoles:
+      'Keiner Ihrer aktuellen Rollen taucht in der'
+      + ' ACL dieses Namensraums auf.',
+    aclRoleName: 'Rolle',
+    aclCanRead: 'Kann lesen',
+    aclCanWrite: 'Kann schreiben',
   },
 }
 
