@@ -2,6 +2,15 @@
 
 Use this guide when working on this repository.
 
+```{toctree}
+:hidden:
+
+invariants
+architecture
+security
+code-style
+```
+
 ## Read in order
 
 1. [Invariants](invariants.md)

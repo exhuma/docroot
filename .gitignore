@@ -150,3 +150,6 @@ __pycache__/
 # Local development data and environment
 deploy/dev/data/
 deploy/dev/.env
+
+# Sphinx build output
+docs/_build/

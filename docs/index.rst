@@ -9,5 +9,6 @@ Upload versioned documentation archives (ZIP files containing
    :maxdepth: 2
    :caption: Contents
 
+   developer/index
    operator/index
    user/index

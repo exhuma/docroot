@@ -25,6 +25,13 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.9",
 ]
+docs = [
+    "sphinx>=8",
+    "furo",
+    "sphinx-autodoc-typehints",
+    "myst-parser",
+    "sphinx-copybutton",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/app"]

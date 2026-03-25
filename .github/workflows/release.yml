@@ -117,6 +117,12 @@ jobs:
       - run: npm run build
         working-directory: apps/frontend
 
+      - name: Capture build time
+        id: build-time
+        run: |
+          TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "ts=$TS" >> $GITHUB_OUTPUT
+
       - name: Build and push nginx image
         uses: docker/build-push-action@v6
         with:
@@ -128,7 +134,7 @@ jobs:
           build-args: |
             VITE_GITHUB_REPO_URL=https://github.com/${{ github.repository }}
             VITE_APP_COMMIT=${{ github.sha }}
-            VITE_APP_BUILD_TIME=${{ github.event.head_commit.timestamp }}
+            VITE_APP_BUILD_TIME=${{ steps.build-time.outputs.ts }}
 
   create-release:
     name: Create GitHub Release
