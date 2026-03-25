@@ -2,14 +2,14 @@
   <v-dialog max-width="500" :model-value="modelValue">
     <v-card :title="t('uploadTitle')">
       <v-card-text>
-        <v-file-input v-model="file" accept=".zip" variant="outlined" :label="t('upload')" />
-        <v-text-field v-model="versionName" variant="outlined" class="mt-2" :label="t('version')" />
+        <v-file-input v-model="file" accept=".zip" :label="t('upload')" variant="outlined" />
+        <v-text-field v-model="versionName" class="mt-2" :label="t('version')" variant="outlined" />
         <v-text-field
           v-model="localeName"
-          variant="outlined"
           class="mt-2"
           hint="2-letter code, e.g. en"
           :label="t('locale')"
+          variant="outlined"
         />
         <v-checkbox v-model="isLatest" :label="t('setLatest')" />
         <v-alert v-if="errorMsg" class="mt-2" type="error">

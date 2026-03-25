@@ -13,7 +13,7 @@
       style="max-width: 120px"
     />
     <AuthBar />
-    <v-progress-linear v-if="loading" location="bottom" absolute indeterminate color="primary" />
+    <v-progress-linear v-if="loading" absolute color="primary" indeterminate location="bottom" />
   </v-app-bar>
 
   <v-container>
@@ -82,7 +82,7 @@
   <v-dialog v-model="createDialog" max-width="400">
     <v-card :title="t('namespaces')">
       <v-card-text>
-        <v-text-field v-model="newName" variant="outlined" autofocus :label="t('name')" />
+        <v-text-field v-model="newName" autofocus :label="t('name')" variant="outlined" />
         <v-checkbox v-model="newPublicRead" :label="t('publicRead')" />
         <v-alert v-if="!isAuthenticated()" density="compact" type="warning">
           {{ t('loginRequired') }}

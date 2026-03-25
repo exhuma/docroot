@@ -7,7 +7,7 @@
       {{ t('upload') }}
     </v-btn>
     <AuthBar />
-    <v-progress-linear v-if="loading" location="bottom" absolute indeterminate color="primary" />
+    <v-progress-linear v-if="loading" absolute color="primary" indeterminate location="bottom" />
   </v-app-bar>
 
   <v-container>
