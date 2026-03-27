@@ -49,13 +49,13 @@ def _make_lifespan(settings: Settings):
         )
         if not settings.oauth_jwks_url:
             _log.warning(
-                "DOCROOT_OAUTH_JWKS_URL is not set — authentication is disabled"
+                "DOCROOT_API_OAUTH_JWKS_URL is not set — authentication is disabled"
             )
         else:
             _log.info("JWKS endpoint: %s", settings.oauth_jwks_url)
             if not settings.oauth_verify_ssl:
                 _log.warning(
-                    "DOCROOT_OAUTH_VERIFY_SSL=false — "
+                    "DOCROOT_API_OAUTH_VERIFY_SSL=false — "
                     "TLS verification for the JWKS endpoint is "
                     "DISABLED. Do not use this setting in production."
                 )

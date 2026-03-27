@@ -5,12 +5,12 @@ services:
     build:
       context: ../../apps/backend
     environment:
-      - DOCROOT_DATA_ROOT=/data
-      - DOCROOT_OAUTH_JWKS_URL=${DOCROOT_OAUTH_JWKS_URL}
-      - DOCROOT_OAUTH_AUDIENCE=${DOCROOT_OAUTH_AUDIENCE}
-      - DOCROOT_OAUTH_ROLE_EXTRACTOR=${DOCROOT_OAUTH_ROLE_EXTRACTOR:-keycloak}
-      - DOCROOT_CORS_ORIGINS=${DOCROOT_CORS_ORIGINS:-*}
-      - DOCROOT_COOKIE_SECURE=${DOCROOT_COOKIE_SECURE:-false}
+      - DOCROOT_API_DATA_ROOT=/data
+      - DOCROOT_API_OAUTH_JWKS_URL=${DOCROOT_API_OAUTH_JWKS_URL}
+      - DOCROOT_API_OAUTH_AUDIENCE=${DOCROOT_API_OAUTH_AUDIENCE}
+      - DOCROOT_API_OAUTH_ROLE_EXTRACTOR=${DOCROOT_API_OAUTH_ROLE_EXTRACTOR:-keycloak}
+      - DOCROOT_API_CORS_ORIGINS=${DOCROOT_API_CORS_ORIGINS:-*}
+      - DOCROOT_API_COOKIE_SECURE=${DOCROOT_API_COOKIE_SECURE:-false}
     volumes:
       - data:/data
       - ../dev/jwks.json:/jwks.json:ro
@@ -37,8 +37,8 @@ services:
     depends_on:
       - api
     environment:
-      - OIDC_ISSUER=${OIDC_ISSUER:-}
-      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - DOCROOT_WEB_OIDC_ISSUER=${DOCROOT_WEB_OIDC_ISSUER:-}
+      - DOCROOT_WEB_OIDC_CLIENT_ID=${DOCROOT_WEB_OIDC_CLIENT_ID:-}
     volumes:
       - data:/data
     restart: unless-stopped

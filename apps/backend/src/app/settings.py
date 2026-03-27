@@ -1,7 +1,7 @@
 """Application settings loaded from environment variables.
 
 Uses pydantic-settings so all configuration is validated at startup.
-All variables are prefixed with DOCROOT_.
+All variables are prefixed with DOCROOT_API_.
 """
 
 from functools import lru_cache
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_prefix="DOCROOT_",
+        env_prefix="DOCROOT_API_",
         env_file=".env",
         env_file_encoding="utf-8",
     )

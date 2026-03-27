@@ -25,23 +25,31 @@ Open `http://localhost` in a browser.
 
 ## Environment Variables
 
-All variables use the `DOCROOT_` prefix.
+### API container (`DOCROOT_API_` prefix)
+
 Set them in `deploy/compose/.env` or pass them directly to the
-container.
+API container.
 
 | Variable | Default | Description |
 |---|---|---|
-| `DOCROOT_DATA_ROOT` | `/data` | Filesystem path for stored data |
-| `DOCROOT_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint for JWT validation (`https://…` or `file://…`) |
-| `DOCROOT_OAUTH_AUDIENCE` | *(empty)* | Expected `aud` claim. Empty disables audience validation. |
-| `DOCROOT_OAUTH_CA_BUNDLE` | *(empty)* | Path to a PEM CA cert/bundle for verifying the JWKS endpoint. Set when the IDP uses an internal or self-signed CA. |
-| `DOCROOT_OAUTH_VERIFY_SSL` | `true` | Set `false` to disable TLS verification for the JWKS endpoint. **Not for production use.** A warning is logged on startup. |
-| `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor. Only `keycloak` is shipped in this release. |
-| `DOCROOT_CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*`. |
-| `DOCROOT_COOKIE_SECURE` | `false` | Set `true` on HTTPS deployments. |
-| `DOCROOT_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
-| `DOCROOT_ZIP_MAX_FILES` | `500` | Maximum files in an uploaded ZIP. |
-| `DOCROOT_ZIP_MAX_EXTRACTED_MB` | `500` | Maximum extracted ZIP size in MB. |
+| `DOCROOT_API_DATA_ROOT` | `/data` | Filesystem path for stored data |
+| `DOCROOT_API_OAUTH_JWKS_URL` | *(empty)* | JWKS endpoint for JWT validation (`https://…` or `file://…`) |
+| `DOCROOT_API_OAUTH_AUDIENCE` | *(empty)* | Expected `aud` claim. Empty disables audience validation. |
+| `DOCROOT_API_OAUTH_CA_BUNDLE` | *(empty)* | Path to a PEM CA cert/bundle for verifying the JWKS endpoint. Set when the IDP uses an internal or self-signed CA. |
+| `DOCROOT_API_OAUTH_VERIFY_SSL` | `true` | Set `false` to disable TLS verification for the JWKS endpoint. **Not for production use.** A warning is logged on startup. |
+| `DOCROOT_API_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor. Only `keycloak` is shipped in this release. |
+| `DOCROOT_API_CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*`. |
+| `DOCROOT_API_COOKIE_SECURE` | `false` | Set `true` on HTTPS deployments. |
+| `DOCROOT_API_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
+| `DOCROOT_API_ZIP_MAX_FILES` | `500` | Maximum files in an uploaded ZIP. |
+| `DOCROOT_API_ZIP_MAX_EXTRACTED_MB` | `500` | Maximum extracted ZIP size in MB. |
+
+### nginx/UI container (`DOCROOT_WEB_` prefix)
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCROOT_WEB_OIDC_ISSUER` | *(empty)* | OIDC issuer URL written to `/oidc-config.json`. Empty disables the Login button. |
+| `DOCROOT_WEB_OIDC_CLIENT_ID` | *(empty)* | Public client ID for the browser authorization-code + PKCE flow. |
 
 ---
 
@@ -68,8 +76,6 @@ containers share a network namespace):
 |---|---|---|
 | `API_HOST` | `api` | Hostname or IP of the FastAPI container. Set to `localhost` for same-pod k8s deployments. |
 | `API_PORT` | `8000` | TCP port of the FastAPI container. |
-| `OIDC_ISSUER` | *(empty)* | OIDC issuer URL written to `/oidc-config.json`. Empty disables the Login button. |
-| `OIDC_CLIENT_ID` | *(empty)* | Public client ID for the browser authorization-code + PKCE flow. |
 
 **Single-pod (sidecar) deployment:** Both containers share the pod
 network namespace, so `localhost` resolves to the API container:
@@ -117,12 +123,12 @@ Configure both clients for every IDP:
 
 ```shell
 # Back-end: where to fetch signing keys, and the expected audience
-DOCROOT_OAUTH_JWKS_URL=https://<idp>/.well-known/jwks.json
-DOCROOT_OAUTH_AUDIENCE=<api-audience>
+DOCROOT_API_OAUTH_JWKS_URL=https://<idp>/.well-known/jwks.json
+DOCROOT_API_OAUTH_AUDIENCE=<api-audience>
 
 # Front-end (nginx container): issuer and public client id
-OIDC_ISSUER=https://<idp>
-OIDC_CLIENT_ID=<public-client-id>
+DOCROOT_WEB_OIDC_ISSUER=https://<idp>
+DOCROOT_WEB_OIDC_CLIENT_ID=<public-client-id>
 ```
 
 Register the following redirect URIs at your IDP.  No client
@@ -135,7 +141,7 @@ secret is needed (PKCE only).
 
 ### Audience validation
 
-`DOCROOT_OAUTH_AUDIENCE` must match the `aud` claim in the
+`DOCROOT_API_OAUTH_AUDIENCE` must match the `aud` claim in the
 access token.  This is the trickiest part and differs between
 IDPs — see the provider-specific sections below.
 
@@ -159,8 +165,8 @@ In the Keycloak admin console, create a realm (e.g. `docroot`).
 2. Client authentication: **ON**; Service accounts: **ON**
 
 ```shell
-DOCROOT_OAUTH_JWKS_URL=https://keycloak.example.com/realms/docroot/protocol/openid-connect/certs
-DOCROOT_OAUTH_AUDIENCE=docroot-api
+DOCROOT_API_OAUTH_JWKS_URL=https://keycloak.example.com/realms/docroot/protocol/openid-connect/certs
+DOCROOT_API_OAUTH_AUDIENCE=docroot-api
 ```
 
 ### 3. Front-end client (public)
@@ -173,8 +179,8 @@ DOCROOT_OAUTH_AUDIENCE=docroot-api
 4. Web origins: `https://docroot.example.com`
 
 ```shell
-OIDC_ISSUER=https://keycloak.example.com/realms/docroot
-OIDC_CLIENT_ID=docroot-ui
+DOCROOT_WEB_OIDC_ISSUER=https://keycloak.example.com/realms/docroot
+DOCROOT_WEB_OIDC_CLIENT_ID=docroot-ui
 ```
 
 ### 4. Roles
@@ -222,7 +228,7 @@ The trade-off is a small amount of manual configuration.
 
 Under **Expose an API**, set the **Application ID URI**
 (e.g. `api://<client-id>`).
-This becomes your `DOCROOT_OAUTH_AUDIENCE`.
+This becomes your `DOCROOT_API_OAUTH_AUDIENCE`.
 
 > **Token version:** Entra ID issues v1 tokens by default.
 > In the app **Manifest**, set
@@ -230,10 +236,10 @@ This becomes your `DOCROOT_OAUTH_AUDIENCE`.
 > JWKS URL below only works with v2.
 
 ```shell
-DOCROOT_OAUTH_JWKS_URL=https://login.microsoftonline.com/<tenant-id>/discovery/v2.0/keys
-DOCROOT_OAUTH_AUDIENCE=api://<client-id>
-OIDC_ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
-OIDC_CLIENT_ID=<client-id>
+DOCROOT_API_OAUTH_JWKS_URL=https://login.microsoftonline.com/<tenant-id>/discovery/v2.0/keys
+DOCROOT_API_OAUTH_AUDIENCE=api://<client-id>
+DOCROOT_WEB_OIDC_ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
+DOCROOT_WEB_OIDC_CLIENT_ID=<client-id>
 ```
 
 ---
@@ -241,10 +247,10 @@ OIDC_CLIENT_ID=<client-id>
 ## Google
 
 ```shell
-DOCROOT_OAUTH_JWKS_URL=https://www.googleapis.com/oauth2/v3/certs
-DOCROOT_OAUTH_AUDIENCE=<google-client-id>
-OIDC_ISSUER=https://accounts.google.com
-OIDC_CLIENT_ID=<google-client-id>
+DOCROOT_API_OAUTH_JWKS_URL=https://www.googleapis.com/oauth2/v3/certs
+DOCROOT_API_OAUTH_AUDIENCE=<google-client-id>
+DOCROOT_WEB_OIDC_ISSUER=https://accounts.google.com
+DOCROOT_WEB_OIDC_CLIENT_ID=<google-client-id>
 ```
 
 In the [Google Cloud Console](https://console.cloud.google.com):

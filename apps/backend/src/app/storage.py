@@ -116,11 +116,11 @@ class FilesystemStorage:
         """Initialise storage with the given data root.
 
         :param data_root: Override the storage root path.
-            If ``None``, falls back to the ``DOCROOT_DATA_ROOT``
+            If ``None``, falls back to the ``DOCROOT_API_DATA_ROOT``
             environment variable, then to ``/data``.
         """
         if data_root is None:
-            data_root = os.environ.get("DOCROOT_DATA_ROOT", "/data")
+            data_root = os.environ.get("DOCROOT_API_DATA_ROOT", "/data")
         self.data_root = Path(data_root)
 
     # ------------------------------------------------------------------
