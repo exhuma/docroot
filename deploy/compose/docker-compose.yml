@@ -10,8 +10,6 @@ services:
       - DOCROOT_OAUTH_AUDIENCE=${DOCROOT_OAUTH_AUDIENCE}
       - DOCROOT_OAUTH_ROLE_EXTRACTOR=${DOCROOT_OAUTH_ROLE_EXTRACTOR:-keycloak}
       - DOCROOT_CORS_ORIGINS=${DOCROOT_CORS_ORIGINS:-*}
-      - DOCROOT_OIDC_ISSUER=${DOCROOT_OIDC_ISSUER:-}
-      - DOCROOT_OIDC_CLIENT_ID=${DOCROOT_OIDC_CLIENT_ID:-}
       - DOCROOT_COOKIE_SECURE=${DOCROOT_COOKIE_SECURE:-false}
     volumes:
       - data:/data
@@ -38,6 +36,9 @@ services:
       - "80:80"
     depends_on:
       - api
+    environment:
+      - OIDC_ISSUER=${OIDC_ISSUER:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
     volumes:
       - data:/data
     restart: unless-stopped

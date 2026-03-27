@@ -38,8 +38,6 @@ container.
 | `DOCROOT_OAUTH_VERIFY_SSL` | `true` | Set `false` to disable TLS verification for the JWKS endpoint. **Not for production use.** A warning is logged on startup. |
 | `DOCROOT_OAUTH_ROLE_EXTRACTOR` | `keycloak` | Role extractor. Only `keycloak` is shipped in this release. |
 | `DOCROOT_CORS_ORIGINS` | `*` | Comma-separated allowed origins, or `*`. |
-| `DOCROOT_OIDC_ISSUER` | *(empty)* | OIDC issuer URL served to the browser. Empty disables the Login button. |
-| `DOCROOT_OIDC_CLIENT_ID` | *(empty)* | Public client ID for the browser authorization-code + PKCE flow. |
 | `DOCROOT_COOKIE_SECURE` | `false` | Set `true` on HTTPS deployments. |
 | `DOCROOT_LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 | `DOCROOT_ZIP_MAX_FILES` | `500` | Maximum files in an uploaded ZIP. |
@@ -70,6 +68,8 @@ containers share a network namespace):
 |---|---|---|
 | `API_HOST` | `api` | Hostname or IP of the FastAPI container. Set to `localhost` for same-pod k8s deployments. |
 | `API_PORT` | `8000` | TCP port of the FastAPI container. |
+| `OIDC_ISSUER` | *(empty)* | OIDC issuer URL written to `/oidc-config.json`. Empty disables the Login button. |
+| `OIDC_CLIENT_ID` | *(empty)* | Public client ID for the browser authorization-code + PKCE flow. |
 
 **Single-pod (sidecar) deployment:** Both containers share the pod
 network namespace, so `localhost` resolves to the API container:
@@ -120,9 +120,9 @@ Configure both clients for every IDP:
 DOCROOT_OAUTH_JWKS_URL=https://<idp>/.well-known/jwks.json
 DOCROOT_OAUTH_AUDIENCE=<api-audience>
 
-# Front-end: issuer and public client id
-DOCROOT_OIDC_ISSUER=https://<idp>
-DOCROOT_OIDC_CLIENT_ID=<public-client-id>
+# Front-end (nginx container): issuer and public client id
+OIDC_ISSUER=https://<idp>
+OIDC_CLIENT_ID=<public-client-id>
 ```
 
 Register the following redirect URIs at your IDP.  No client
@@ -173,8 +173,8 @@ DOCROOT_OAUTH_AUDIENCE=docroot-api
 4. Web origins: `https://docroot.example.com`
 
 ```shell
-DOCROOT_OIDC_ISSUER=https://keycloak.example.com/realms/docroot
-DOCROOT_OIDC_CLIENT_ID=docroot-ui
+OIDC_ISSUER=https://keycloak.example.com/realms/docroot
+OIDC_CLIENT_ID=docroot-ui
 ```
 
 ### 4. Roles
@@ -232,8 +232,8 @@ This becomes your `DOCROOT_OAUTH_AUDIENCE`.
 ```shell
 DOCROOT_OAUTH_JWKS_URL=https://login.microsoftonline.com/<tenant-id>/discovery/v2.0/keys
 DOCROOT_OAUTH_AUDIENCE=api://<client-id>
-DOCROOT_OIDC_ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
-DOCROOT_OIDC_CLIENT_ID=<client-id>
+OIDC_ISSUER=https://login.microsoftonline.com/<tenant-id>/v2.0
+OIDC_CLIENT_ID=<client-id>
 ```
 
 ---
@@ -243,8 +243,8 @@ DOCROOT_OIDC_CLIENT_ID=<client-id>
 ```shell
 DOCROOT_OAUTH_JWKS_URL=https://www.googleapis.com/oauth2/v3/certs
 DOCROOT_OAUTH_AUDIENCE=<google-client-id>
-DOCROOT_OIDC_ISSUER=https://accounts.google.com
-DOCROOT_OIDC_CLIENT_ID=<google-client-id>
+OIDC_ISSUER=https://accounts.google.com
+OIDC_CLIENT_ID=<google-client-id>
 ```
 
 In the [Google Cloud Console](https://console.cloud.google.com):

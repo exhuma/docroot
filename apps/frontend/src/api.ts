@@ -24,11 +24,6 @@ export interface ResolveResult {
   fallback_used: boolean
 }
 
-export interface OidcConfig {
-  issuer: string | null
-  client_id: string | null
-}
-
 export interface AclRole {
   role: string
   read: boolean
@@ -258,11 +253,5 @@ export const api = {
       credentials: 'same-origin',
     })
     await handleResponse(res)
-  },
-
-  /** Fetch the OIDC public client configuration from the server. */
-  async getOidcConfig(): Promise<OidcConfig> {
-    const res = await fetch(`${BASE}/oidc-config`)
-    return handleResponse(res) as Promise<OidcConfig>
   },
 }

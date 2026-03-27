@@ -28,11 +28,6 @@ class Settings(BaseSettings):
     :param log_level: Logging level (DEBUG, INFO, WARNING, ERROR).
     :param cookie_secure: Append the ``Secure`` attribute to the
         session cookie (required for HTTPS deployments).
-    :param oidc_issuer: OIDC issuer URL served to the frontend
-        public client (e.g. ``https://keycloak.example.com/realms/myrealm``).
-        Empty string disables OIDC login button.
-    :param oidc_client_id: OIDC public client ID used by the
-        frontend for the authorization-code + PKCE flow.
     :param oauth_ca_bundle: Path to a PEM CA certificate or bundle
         used to verify the JWKS endpoint's TLS certificate.  Set
         this when the IDP is behind an internal or self-signed CA.
@@ -58,8 +53,6 @@ class Settings(BaseSettings):
     zip_max_extracted_mb: int = Field(default=500)
     log_level: str = Field(default="INFO")
     cookie_secure: bool = Field(default=False)
-    oidc_issuer: str = Field(default="")
-    oidc_client_id: str = Field(default="")
     oauth_ca_bundle: str = Field(default="")
     oauth_verify_ssl: bool = Field(default=True)
 
