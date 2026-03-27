@@ -7,6 +7,7 @@
       v-model="uiLocale"
       class="mr-2"
       density="compact"
+      variant="outlined"
       hide-details
       :items="uiLocales"
       :label="t('language')"

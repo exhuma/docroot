@@ -5,7 +5,7 @@
       <v-icon v-if="!avatarSrc"> mdi-account </v-icon>
     </v-avatar>
     <span class="text-body-2 mr-2">{{ displayName }}</span>
-    <v-btn density="compact" prepend-icon="mdi-logout" variant="tonal" @click="onLogout">
+    <v-btn prepend-icon="mdi-logout" variant="tonal" @click="onLogout">
       {{ t('logout') }}
     </v-btn>
   </template>
