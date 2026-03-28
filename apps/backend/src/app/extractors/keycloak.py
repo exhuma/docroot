@@ -2,9 +2,10 @@
 
 Extracts both realm-level and client-level roles from Keycloak JWTs.
 
-Realm roles are read from ``realm_access.roles``.
+Realm roles are read from ``realm_access.roles`` and returned as-is.
 Client roles are read from ``resource_access.<client_id>.roles``
-for every client present in ``resource_access``.
+and returned prefixed with the client ID and a slash, e.g.
+``my-client/editor``, to preserve the client scope context.
 """
 
 
@@ -14,9 +15,10 @@ def extract_roles(
 ) -> list[str]:
     """Extract Keycloak realm and client roles from JWT payload.
 
-    Realm roles are taken from ``realm_access.roles``.
-    Client roles are taken from every entry in
-    ``resource_access``.
+    Realm roles are taken from ``realm_access.roles`` and returned
+    as-is.  Client roles are taken from every entry in
+    ``resource_access`` and returned as ``<client_id>/<role>`` to
+    preserve the client context and avoid name collisions.
 
     :param payload: Decoded JWT claims.
     :param context: Authentication context (unused by this
@@ -33,12 +35,14 @@ def extract_roles(
 
     resource_access = payload.get("resource_access")
     if isinstance(resource_access, dict):
-        for client_data in resource_access.values():
+        for client_id, client_data in resource_access.items():
             if not isinstance(client_data, dict):
                 continue
             client_roles = client_data.get("roles", [])
             if isinstance(client_roles, list):
-                roles.extend(str(r) for r in client_roles)
+                roles.extend(
+                    f"{client_id}/{r}" for r in client_roles
+                )
 
     # Deduplicate while preserving order
     seen: set[str] = set()
