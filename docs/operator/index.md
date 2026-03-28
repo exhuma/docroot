@@ -193,6 +193,16 @@ Client-scoped roles are prefixed with the client ID and a slash
 `namespace.toml` ACL entries when you want to grant access based
 on a client-specific role.
 
+To limit which clients contribute roles, set one or both of:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCROOT_KEYCLOAK_CLIENT_ALLOWLIST` | *(empty)* | Comma-separated list of client IDs to include. When non-empty, only roles from these clients are extracted. |
+| `DOCROOT_KEYCLOAK_CLIENT_DENYLIST` | *(empty)* | Comma-separated list of client IDs to exclude. Applied only when the allowlist is empty. |
+
+The allowlist always takes precedence: if a client ID appears in
+both lists it is included.
+
 ### Getting the audience into the token
 
 Keycloak does **not** add an `aud` claim for the back-end

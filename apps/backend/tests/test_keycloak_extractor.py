@@ -1,6 +1,6 @@
 """Tests for the Keycloak JWT role extractor."""
 
-from app.extractors.keycloak import extract_roles
+from app.extractors.keycloak import _include_client, extract_roles
 
 
 def test_realm_roles_returned_as_is() -> None:
@@ -99,3 +99,106 @@ def test_non_dict_client_entry_ignored() -> None:
     }
     result = extract_roles(payload, {})
     assert result == []
+
+
+# ---------------------------------------------------------------------------
+# Allowlist / denylist filtering
+# ---------------------------------------------------------------------------
+
+
+def test_allowlist_includes_only_listed_clients() -> None:
+    """Ensure only whitelisted clients are extracted when allowlist set."""
+    payload: dict[str, object] = {
+        "resource_access": {
+            "client-a": {"roles": ["reader"]},
+            "client-b": {"roles": ["writer"]},
+        },
+    }
+    ctx: dict[str, object] = {
+        "client_allowlist": ["client-a"],
+    }
+    result = extract_roles(payload, ctx)
+    assert "client-a/reader" in result
+    assert "client-b/writer" not in result
+
+
+def test_denylist_excludes_listed_clients() -> None:
+    """Ensure denylisted clients are excluded from role extraction."""
+    payload: dict[str, object] = {
+        "resource_access": {
+            "client-a": {"roles": ["reader"]},
+            "client-b": {"roles": ["writer"]},
+        },
+    }
+    ctx: dict[str, object] = {
+        "client_denylist": ["client-b"],
+    }
+    result = extract_roles(payload, ctx)
+    assert "client-a/reader" in result
+    assert "client-b/writer" not in result
+
+
+def test_allowlist_takes_precedence_over_denylist() -> None:
+    """Ensure allowlist wins when a client appears in both lists."""
+    payload: dict[str, object] = {
+        "resource_access": {
+            "client-a": {"roles": ["reader"]},
+        },
+    }
+    ctx: dict[str, object] = {
+        "client_allowlist": ["client-a"],
+        "client_denylist": ["client-a"],
+    }
+    result = extract_roles(payload, ctx)
+    assert "client-a/reader" in result
+
+
+def test_empty_allowlist_uses_denylist() -> None:
+    """Ensure an empty allowlist falls back to denylist filtering."""
+    payload: dict[str, object] = {
+        "resource_access": {
+            "client-a": {"roles": ["reader"]},
+            "client-b": {"roles": ["writer"]},
+        },
+    }
+    ctx: dict[str, object] = {
+        "client_allowlist": [],
+        "client_denylist": ["client-a"],
+    }
+    result = extract_roles(payload, ctx)
+    assert "client-a/reader" not in result
+    assert "client-b/writer" in result
+
+
+def test_realm_roles_unaffected_by_allowlist() -> None:
+    """Ensure realm roles are never filtered by client allow/deny lists."""
+    payload: dict[str, object] = {
+        "realm_access": {"roles": ["global-admin"]},
+        "resource_access": {
+            "client-a": {"roles": ["local-admin"]},
+        },
+    }
+    ctx: dict[str, object] = {
+        "client_allowlist": [],
+        "client_denylist": ["client-a"],
+    }
+    result = extract_roles(payload, ctx)
+    assert "global-admin" in result
+    assert "client-a/local-admin" not in result
+
+
+def test_include_client_allowlist_only() -> None:
+    """Ensure _include_client includes a client in allowlist."""
+    assert _include_client("a", ["a", "b"], []) is True
+    assert _include_client("c", ["a", "b"], []) is False
+
+
+def test_include_client_denylist_only() -> None:
+    """Ensure _include_client excludes a client in denylist."""
+    assert _include_client("a", [], ["a"]) is False
+    assert _include_client("b", [], ["a"]) is True
+
+
+def test_include_client_allowlist_wins_over_denylist() -> None:
+    """Ensure _include_client returns True when in both lists."""
+    assert _include_client("a", ["a"], ["a"]) is True
