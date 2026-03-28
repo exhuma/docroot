@@ -197,11 +197,12 @@ To limit which clients contribute roles, set one or both of:
 
 | Variable | Default | Description |
 |---|---|---|
-| `DOCROOT_KEYCLOAK_CLIENT_ALLOWLIST` | *(empty)* | Comma-separated list of client IDs to include. When non-empty, only roles from these clients are extracted. |
-| `DOCROOT_KEYCLOAK_CLIENT_DENYLIST` | *(empty)* | Comma-separated list of client IDs to exclude. Applied only when the allowlist is empty. |
+| `DOCROOT_KEYCLOAK_CLIENT_ALLOWLIST` | *(empty)* | Comma-separated list of client IDs to include. When non-empty, only roles from these clients are considered. |
+| `DOCROOT_KEYCLOAK_CLIENT_DENYLIST` | *(empty)* | Comma-separated list of client IDs to exclude. Applied after the allowlist. |
 
-The allowlist always takes precedence: if a client ID appears in
-both lists it is included.
+The allowlist is processed first (when non-empty, only listed
+clients pass).  The denylist is then applied on top.  A client ID
+that appears in both lists is excluded.
 
 ### Getting the audience into the token
 

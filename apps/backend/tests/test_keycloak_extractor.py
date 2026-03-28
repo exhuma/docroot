@@ -139,7 +139,7 @@ def test_denylist_excludes_listed_clients() -> None:
 
 
 def test_allowlist_takes_precedence_over_denylist() -> None:
-    """Ensure allowlist wins when a client appears in both lists."""
+    """Ensure a client in both lists is excluded (denylist wins after allowlist)."""
     payload: dict[str, object] = {
         "resource_access": {
             "client-a": {"roles": ["reader"]},
@@ -150,7 +150,7 @@ def test_allowlist_takes_precedence_over_denylist() -> None:
         "client_denylist": ["client-a"],
     }
     result = extract_roles(payload, ctx)
-    assert "client-a/reader" in result
+    assert "client-a/reader" not in result
 
 
 def test_empty_allowlist_uses_denylist() -> None:
@@ -200,5 +200,5 @@ def test_include_client_denylist_only() -> None:
 
 
 def test_include_client_allowlist_wins_over_denylist() -> None:
-    """Ensure _include_client returns True when in both lists."""
-    assert _include_client("a", ["a"], ["a"]) is True
+    """Ensure _include_client returns False when in both lists (denylist wins)."""
+    assert _include_client("a", ["a"], ["a"]) is False

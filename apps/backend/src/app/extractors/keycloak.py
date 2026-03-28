@@ -10,10 +10,10 @@ and returned prefixed with the client ID and a slash, e.g.
 Client inclusion can be controlled via the ``client_allowlist`` and
 ``client_denylist`` keys in the *context* dict passed to
 :func:`extract_roles`.  Both accept a list of client ID strings.
-When the allowlist is non-empty only the listed clients are
-processed.  When only the denylist is set, all clients except those
-listed are processed.  Allowlist takes precedence: a client present
-in both lists is always included.
+The allowlist is applied first: when non-empty, only the listed
+clients are considered.  The denylist is then applied on top to
+remove any explicitly blocked clients.  A client present in both
+lists is therefore excluded.
 """
 
 
@@ -24,17 +24,18 @@ def _include_client(
 ) -> bool:
     """Return True if *client_id* should have its roles extracted.
 
-    When *allowlist* is non-empty the client must be in it.
-    Otherwise the client must not be in *denylist*.
-    Allowlist always takes precedence over denylist.
+    The allowlist is processed first: when non-empty the client must
+    be listed.  The denylist is then applied: even if a client passes
+    the allowlist step, it is excluded when present in the denylist.
+    A client in both lists is therefore excluded.
 
     :param client_id: Keycloak client identifier.
-    :param allowlist: If non-empty, only these clients are included.
-    :param denylist: Clients to exclude when allowlist is empty.
+    :param allowlist: If non-empty, only these clients are considered.
+    :param denylist: Clients to always exclude.
     :returns: True if the client's roles should be included.
     """
-    if allowlist:
-        return client_id in allowlist
+    if allowlist and client_id not in allowlist:
+        return False
     return client_id not in denylist
 
 
@@ -51,7 +52,8 @@ def extract_roles(
 
     Client extraction can be filtered using the optional
     ``client_allowlist`` and ``client_denylist`` keys in *context*.
-    Both must be lists of client ID strings when provided.
+    The allowlist is processed first, then the denylist is applied.
+    A client in both lists is excluded.
 
     :param payload: Decoded JWT claims.
     :param context: Authentication context. Recognised keys:
