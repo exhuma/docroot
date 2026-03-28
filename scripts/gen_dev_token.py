@@ -10,6 +10,10 @@ Usage::
 The token is signed with the dev RSA private key at
 ``deploy/dev/dev_key.pem`` and can be verified by the backend when
 ``DOCROOT_OAUTH_JWKS_URL`` points to ``deploy/dev/jwks.json``.
+
+Client-scoped roles (``--client`` + ``--client-roles``) are
+extracted by the backend as ``<client>/<role>``.  Reference them in
+``namespace.toml`` ACL entries using that prefixed form.
 """
 
 import argparse

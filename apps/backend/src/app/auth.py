@@ -260,7 +260,12 @@ def validate_token(
     extractor = _get_extractor(settings)
     roles = extractor(
         payload,
-        {"issuer": issuer, "audience": settings.oauth_audience},
+        {
+            "issuer": issuer,
+            "audience": settings.oauth_audience,
+            "client_allowlist": settings.keycloak_client_allowlist,
+            "client_denylist": settings.keycloak_client_denylist,
+        },
     )
     _log.debug("Token validated: sub=%s roles=%s", subject, roles)
     return AuthContext(

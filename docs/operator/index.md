@@ -187,6 +187,23 @@ Create realm roles (e.g. `docroot-editor`) under
 The Keycloak role extractor reads `realm_access.roles` and
 `resource_access.<client_id>.roles` from the token.
 
+Realm roles are returned as-is (e.g. `docroot-editor`).
+Client-scoped roles are prefixed with the client ID and a slash
+(e.g. `docroot-api/editor`).  Use the prefixed form in
+`namespace.toml` ACL entries when you want to grant access based
+on a client-specific role.
+
+To limit which clients contribute roles, set one or both of:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DOCROOT_KEYCLOAK_CLIENT_ALLOWLIST` | *(empty)* | Comma-separated list of client IDs to include. When non-empty, only roles from these clients are considered. |
+| `DOCROOT_KEYCLOAK_CLIENT_DENYLIST` | *(empty)* | Comma-separated list of client IDs to exclude. Applied after the allowlist. |
+
+The allowlist is processed first (when non-empty, only listed
+clients pass).  The denylist is then applied on top.  A client ID
+that appears in both lists is excluded.
+
 ### Getting the audience into the token
 
 Keycloak does **not** add an `aud` claim for the back-end
