@@ -1,6 +1,6 @@
 <template>
   <v-app-bar>
-    <v-img src="@/assets/logo.svg" height="36" max-width="110" class="ml-2 mr-1" />
+    <v-img class="ml-2 mr-1" height="36" max-width="110" src="@/assets/logo.svg" />
     <v-toolbar-title>{{ t('namespaces') }}</v-toolbar-title>
     <v-spacer />
     <v-btn icon="mdi-help-circle-outline" :title="t('userManual')" :to="'/manual'" />

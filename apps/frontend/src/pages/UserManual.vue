@@ -26,51 +26,51 @@
           <v-col cols="12" md="6">
             <v-text-field
               v-model="docrootUrl"
-              :label="t('docrootUrl')"
               density="compact"
+              :label="t('docrootUrl')"
               variant="outlined"
             />
           </v-col>
           <v-col cols="12" md="6">
             <v-text-field
               v-model="idpUrl"
-              :label="t('idpUrl')"
-              :hint="t('idpUrlHint')"
               density="compact"
+              :hint="t('idpUrlHint')"
+              :label="t('idpUrl')"
               variant="outlined"
             />
           </v-col>
           <v-col cols="12" md="4">
             <v-text-field
               v-model="ciClientId"
-              :label="t('ciClientId')"
-              :hint="t('ciClientIdHint')"
               density="compact"
+              :hint="t('ciClientIdHint')"
+              :label="t('ciClientId')"
               variant="outlined"
             />
           </v-col>
           <v-col cols="12" md="4">
             <v-text-field
               v-model="ciClientSecret"
-              :label="t('ciClientSecret')"
-              :hint="t('ciClientSecretHint')"
               density="compact"
+              :hint="t('ciClientSecretHint')"
+              :label="t('ciClientSecret')"
               variant="outlined"
             />
           </v-col>
           <v-col cols="6" md="2">
             <v-text-field
               v-model="targetNamespace"
-              :label="t('targetNamespace')"
               density="compact"
+              :label="t('targetNamespace')"
               variant="outlined"
             />
           </v-col>
           <v-col cols="6" md="2">
             <v-text-field
               v-model="targetProject"
-              :label="t('targetProject')"
               density="compact"
+              :label="t('targetProject')"
               variant="outlined"
             />
           </v-col>
@@ -188,7 +188,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AuthBar from '@/components/AuthBar.vue'
 import ProseContent from '@/components/ProseContent.vue'
@@ -205,30 +205,30 @@ const targetProject = ref('myproject')
 
 const curlTokenExample = computed(
   () =>
-    `curl -s -X POST \\
-  ${idpUrl.value}/protocol/openid-connect/token \\
-  -d grant_type=client_credentials \\
-  -d client_id=${ciClientId.value} \\
+    String.raw`curl -s -X POST \
+  ${idpUrl.value}/protocol/openid-connect/token \
+  -d grant_type=client_credentials \
+  -d client_id=${ciClientId.value} \
   -d client_secret=${ciClientSecret.value}`,
 )
 
 const curlUploadExample = computed(
   () =>
-    `# 1. Obtain a token via client-credentials grant
-TOKEN=$(curl -s -X POST \\
-  ${idpUrl.value}/protocol/openid-connect/token \\
-  -d grant_type=client_credentials \\
-  -d client_id=${ciClientId.value} \\
-  -d client_secret=${ciClientSecret.value} \\
+    String.raw`# 1. Obtain a token via client-credentials grant
+TOKEN=$(curl -s -X POST \
+  ${idpUrl.value}/protocol/openid-connect/token \
+  -d grant_type=client_credentials \
+  -d client_id=${ciClientId.value} \
+  -d client_secret=${ciClientSecret.value} \
   | jq -r .access_token)
 
 # 2. Upload documentation
-curl -X POST \\
-  ${docrootUrl.value}/api/namespaces/${targetNamespace.value}/projects/${targetProject.value}/upload \\
-  -H "Authorization: Bearer $TOKEN" \\
-  -F "file=@docs.zip" \\
-  -F "version=1.0.0" \\
-  -F "locale=en" \\
+curl -X POST \
+  ${docrootUrl.value}/api/namespaces/${targetNamespace.value}/projects/${targetProject.value}/upload \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "file=@docs.zip" \
+  -F "version=1.0.0" \
+  -F "locale=en" \
   -F "latest=true"`,
 )
 
