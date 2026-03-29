@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type ResolveResult, type VersionInfo } from '@/api'
@@ -297,6 +297,20 @@ onMounted(async () => {
   }
   await resolve()
 })
+
+/**
+ * Re-resolve whenever version or locale params change in the URL.
+ * This covers both the floating-panel selectors and browser back/forward.
+ */
+watch(
+  () => [route.params.version, route.params.locale] as [string, string],
+  async ([version, locale]) => {
+    selectedVersion.value = version
+    selectedLocale.value = locale
+    await resolve()
+  },
+  { immediate: false },
+)
 
 onUnmounted(() => {
   window.removeEventListener('resize', clampPanel)
