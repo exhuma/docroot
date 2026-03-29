@@ -22,11 +22,18 @@ protocol/openid-connect/token" \
   | jq -r .access_token)
 ```
 
-> **Known limitation:** With a client-credentials token the
-> service account may not share roles with human users, so ACL
-> entries created by that token may not grant access to
-> end-users.  Use a device-code flow to act on behalf of a
-> human user when you need cross-user role coverage.
+### Setting up for unattended uploads
+
+Before an unattended pipeline can upload, a human operator
+must do the following once:
+
+1. Create the namespace (via the UI or API with a human token).
+2. In the namespace ACL, add the confidential client's role
+   with write access.
+
+Once a role that maps to the confidential client's token has
+write access, uploads work without any further manual steps.
+Projects are created automatically on first upload.
 
 ---
 
@@ -42,17 +49,10 @@ curl -s -X POST \
   -d '{"name": "myns", "public_read": false}'
 ```
 
-### Create a project
-
-```bash
-curl -s -X POST \
-  "https://docroot.example.com/api/namespaces/myns/projects" \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "myproject"}'
-```
-
 ### Upload documentation
+
+The project is created automatically on first upload.
+The namespace must already exist.
 
 ```bash
 curl -s -X POST \
@@ -65,11 +65,7 @@ projects/myproject/upload" \
   -F "latest=true"
 ```
 
-The ZIP must satisfy:
-
-- Contains `index.html` at the archive root.
-- No path-traversal (`..`) entries, no symlinks.
-- ≤ 500 files and ≤ 500 MB extracted.
+The ZIP must contain `index.html` at the archive root.
 
 ---
 
@@ -84,11 +80,11 @@ in the UI.  Write access to the namespace is required.
 curl -H "Authorization: Bearer $TOKEN" \
   https://docroot.example.com/api/namespaces/myns/acl
 
-# Grant a role read access
+# Grant a role write access
 curl -X PUT \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"read": true, "write": false}' \
+  -d '{"read": true, "write": true}' \
   https://docroot.example.com/api/namespaces/myns/acl/roles/my-role
 
 # Revoke a role
@@ -96,11 +92,6 @@ curl -X DELETE \
   -H "Authorization: Bearer $TOKEN" \
   https://docroot.example.com/api/namespaces/myns/acl/roles/my-role
 ```
-
-> **Note:** With a client-credentials token the service account
-> may not share roles with human users.  Use a device-code flow
-> to act on behalf of a human user when you need cross-user role
-> coverage.
 
 ---
 

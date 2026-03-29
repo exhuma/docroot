@@ -14,21 +14,14 @@ Docroot instance via the web UI.
 
 ## 1. Prepare Your Archive
 
-The ZIP file must meet these requirements:
+The ZIP file must contain `index.html` at the **archive root**.
+That is the only hard requirement.
 
-- Contains `index.html` at the **archive root** (not in a
-  sub-directory).
-- No path-traversal (`..`) entries and no symlinks.
-- ≤ 500 files and ≤ 500 MB extracted size.
-
-A minimal archive layout:
+A minimal archive:
 
 ```
 docs.zip
-├── index.html
-├── style.css
-└── images/
-    └── logo.png
+└── index.html
 ```
 
 ---
@@ -43,9 +36,17 @@ are logged in.
 
 ## 3. Create a Namespace (first time only)
 
-On the home page click **New namespace**.  Enter a short,
-slug-like name (lowercase, no spaces).  Enable **Public read**
-if unauthenticated users should browse the namespace.
+On the home page click **New namespace** and enter a name.
+
+Two visibility flags control access:
+
+- **Browsable** (default: on) — the namespace and its
+  projects appear in the listing for everyone.  Visitors
+  still need appropriate permission to open the
+  documentation itself.
+- **Public read** — anyone can browse, open, and read the
+  documentation without logging in.  Enable this for fully
+  public documentation.
 
 ---
 

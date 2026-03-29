@@ -1,22 +1,52 @@
-# Versioned Static Documentation Host
+# Docroot
 
-This project provides a filesystem-backed host for versioned documentation with namespace and project scoping, optional `latest` resolution, locale-aware documentation paths, ACL-based access control, and a Vue + Vuetify UI for browsing and uploads.
+**Docroot** is a lightweight, self-hosted documentation host.
+Upload versioned ZIP archives containing an `index.html` and
+browse them through a web UI or REST API.
 
-## What this repository contains
+> **MVP Release** — the API, file layout, and configuration
+> keys may change between releases without a compatibility
+> guarantee.
 
-- Product and architecture contract: [contract.md](contract.md)
-- Frontend application (Vue + Vuetify): [apps/frontend](apps/frontend)
-- Backend scaffold (FastAPI placeholder): [apps/backend](apps/backend)
-- nginx scaffold (static/reverse-proxy placeholder): [apps/nginx](apps/nginx)
-- Deployment scaffold: [deploy/compose](deploy/compose)
-- Developer-centric scaffolding and setup notes: [docs/README.md](docs/README.md)
+## Quick install
 
-## Quick start
+```yaml
+# docker-compose.yml
+services:
+  api:
+    image: ghcr.io/exhuma/docroot/backend:latest
+    environment:
+      DOCROOT_API_DATA_ROOT: /data
+      DOCROOT_API_OAUTH_JWKS_URL: "https://your-idp/jwks.json"
+      DOCROOT_API_OAUTH_AUDIENCE: "docroot-api"
+    volumes:
+      - docroot_data:/data
+  web:
+    image: ghcr.io/exhuma/docroot/nginx:latest
+    ports:
+      - "80:80"
+    environment:
+      DOCROOT_WEB_OIDC_ISSUER: "https://your-idp"
+      DOCROOT_WEB_OIDC_CLIENT_ID: "docroot-web"
+    volumes:
+      - docroot_data:/data
+volumes:
+  docroot_data:
+```
 
-- Install frontend dependencies: `npm run frontend:install`
-- Run frontend dev server: `npm run dev`
-- Run scaffold CI checks locally: `npm run ci`
+```bash
+docker compose up -d
+```
 
-## Status
+Full documentation: <https://docroot.readthedocs.io/>
 
-The implementation scope and invariants are defined in [contract.md](contract.md). Use that file as the authoritative source for v1 behavior.
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `apps/frontend` | Vue + Vuetify single-page application |
+| `apps/backend` | FastAPI backend |
+| `apps/nginx` | nginx reverse-proxy / static-file server |
+| `deploy/compose` | Docker Compose stacks |
+| `docs/` | Sphinx documentation source |
+| `contract.md` | Product and behaviour contract |

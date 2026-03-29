@@ -36,7 +36,7 @@ volumes:
   docroot_data:
 ```
 
-Create a `.env` file alongside it with your IDP values
+Fill in the environment values for your IDP
 (see the Environment Variables section below),
 then start the stack:
 
