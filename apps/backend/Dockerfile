@@ -20,4 +20,8 @@ RUN uv sync --no-dev
 # Invoke uvicorn from the project venv directly to avoid uv
 # requiring a writable cache directory at container start-up
 # (relevant for non-privileged k8s pods with a read-only rootfs).
+# Liveness probe: checks only that the process can handle requests.
+HEALTHCHECK --interval=10s --timeout=2s --retries=3 --start-period=10s \
+    CMD ["python", "-c", \
+         "import urllib.request; urllib.request.urlopen('http://localhost:8000/livez', timeout=2)"]
 CMD ["/app/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
