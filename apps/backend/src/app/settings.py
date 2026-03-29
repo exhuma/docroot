@@ -36,6 +36,13 @@ class Settings(BaseSettings):
         certificate verification when fetching the JWKS endpoint.
         **Only use in non-production / trusted-network environments.**
         A warning is logged on startup when verification is disabled.
+    :param keycloak_client_allowlist: Optional list of Keycloak
+        client IDs whose roles are included.  When non-empty only
+        roles from listed clients appear in the extracted role set.
+        Takes precedence over *keycloak_client_denylist*.
+    :param keycloak_client_denylist: List of Keycloak client IDs
+        whose roles are excluded.  Applied only when
+        *keycloak_client_allowlist* is empty.
     """
 
     model_config = SettingsConfigDict(
@@ -55,6 +62,8 @@ class Settings(BaseSettings):
     cookie_secure: bool = Field(default=False)
     oauth_ca_bundle: str = Field(default="")
     oauth_verify_ssl: bool = Field(default=True)
+    keycloak_client_allowlist: list[str] = Field(default_factory=list)
+    keycloak_client_denylist: list[str] = Field(default_factory=list)
 
 
 @lru_cache(maxsize=1)
