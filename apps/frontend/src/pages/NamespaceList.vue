@@ -28,7 +28,7 @@
         :key="ns.name"
         link
         :subtitle="ns.creator ? t('createdBy', { creator: creatorLabel(ns) }) : undefined"
-        :title="ns.name"
+        :title="ns.display_name || ns.name"
         :to="`/${ns.name}`"
       >
         <template #append>

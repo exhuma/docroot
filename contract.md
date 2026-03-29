@@ -82,9 +82,15 @@ Project directory:
 
 ```
 /data/namespaces/<namespace>/projects/<project>/
-  project.toml (optional placeholder)
+  project.toml
   versions/
   latest -> <version> (symlink if exists)
+```
+
+`project.toml` fields:
+
+```
+display_name = "<human-readable project name>"
 ```
 
 Version directory:
@@ -105,18 +111,40 @@ Namespace directory:
   projects/
 ```
 
+`namespace.toml` top-level fields include:
+
+```
+creator = "<subject>"
+creator_display_name = "<display name>"
+display_name = "<human-readable namespace name>"
+versioning = "<scheme>"
+```
+
 ---
 
 # 4. Naming Rules
 
-Namespace:
+Namespace and project names accept free-form UTF-8 text (the
+*display name*).  The server derives a URL-safe *slug* from the
+display name by:
+
+1. Applying NFKD Unicode normalisation and stripping combining marks.
+2. Lowercasing.
+3. Replacing any run of characters outside `[a-z0-9_]` with a
+   single hyphen.
+4. Stripping leading and trailing hyphens.
+
+The slug is used as the filesystem directory name and URL path
+segment.  The display name is stored in the respective TOML file.
+A 400 error is returned when no alphanumeric characters remain after
+slugification.
+
+Display name constraints:
 
 ```
-[a-z0-9][a-z0-9-_]*
+min_length = 1
+max_length = 200
 ```
-
-Project:
-Same as namespace.
 
 Version:
 

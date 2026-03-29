@@ -16,6 +16,7 @@ from app.dependencies import (
     require_write,
 )
 from app.schemas import ProjectIn, ProjectOut
+from app.slugify import slugify
 from app.storage import (
     FilesystemStorage,
     NamespaceNotFound,
@@ -57,7 +58,12 @@ async def list_projects(
         names = storage.list_projects(namespace)
     except NamespaceNotFound:
         raise HTTPException(status_code=404, detail="Namespace not found")
-    return [ProjectOut(name=n) for n in names]
+    result: list[ProjectOut] = []
+    for n in names:
+        meta = storage.get_project_meta(namespace, n)
+        display_name = str(meta.get("display_name", ""))
+        result.append(ProjectOut(name=n, display_name=display_name))
+    return result
 
 
 @router.post(
@@ -91,11 +97,20 @@ async def create_project(
     if not storage.namespace_exists(namespace):
         raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
+    slug = slugify(body.name)
+    if not slug:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Name must contain at least one alphanumeric character "
+                "so that a valid slug can be derived."
+            ),
+        )
     try:
-        storage.create_project(namespace, body.name)
+        storage.create_project(namespace, slug, display_name=body.name)
     except NamespaceNotFound:
         raise HTTPException(status_code=404, detail="Namespace not found")
-    return ProjectOut(name=body.name)
+    return ProjectOut(name=slug, display_name=body.name)
 
 
 @router.delete(

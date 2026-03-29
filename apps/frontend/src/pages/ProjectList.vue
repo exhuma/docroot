@@ -17,7 +17,7 @@
         v-for="proj in projects"
         :key="proj.name"
         link
-        :title="proj.name"
+        :title="proj.display_name || proj.name"
         :to="`/${namespace}/${proj.name}`"
       />
     </v-list>

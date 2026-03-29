@@ -23,6 +23,7 @@ from app.schemas import (
     NamespaceIn,
     NamespaceOut,
 )
+from app.slugify import slugify
 from app.storage import FilesystemStorage, NamespaceNotFound
 
 router = APIRouter(prefix="/api/namespaces", tags=["namespaces"])
@@ -68,10 +69,14 @@ async def list_namespaces(
             )
             versioning = str(meta.get("versioning", ""))
             creator = str(meta.get("creator", ""))
-            creator_display_name = str(meta.get("creator_display_name", ""))
+            creator_display_name = str(
+                meta.get("creator_display_name", "")
+            )
+            display_name = str(meta.get("display_name", ""))
             result.append(
                 NamespaceOut(
                     name=name,
+                    display_name=display_name,
                     public_read=public_read,
                     browsable=browsable,
                     versioning=versioning,
@@ -102,17 +107,28 @@ async def create_namespace(
     :returns: Created namespace object.
     """
     roles = [{"role": r.role, "read": r.read, "write": r.write} for r in body.roles]
+    slug = slugify(body.name)
+    if not slug:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Name must contain at least one alphanumeric character "
+                "so that a valid slug can be derived."
+            ),
+        )
     storage.create_namespace(
-        body.name,
+        slug,
         creator=auth.subject,
         public_read=body.public_read,
         roles=roles,
         versioning=body.versioning,
         browsable=body.browsable,
         creator_display_name=auth.display_name,
+        display_name=body.name,
     )
     return NamespaceOut(
-        name=body.name,
+        name=slug,
+        display_name=body.name,
         public_read=body.public_read,
         browsable=body.browsable,
         versioning=body.versioning,

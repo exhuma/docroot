@@ -1,18 +1,6 @@
 """Namespace request and response schemas."""
 
-from typing import Annotated
-
 from pydantic import BaseModel, Field
-
-_NamePattern = Annotated[
-    str,
-    Field(
-        pattern=r"^[a-z0-9][a-z0-9\-_]*$",
-        description=(
-            "Lowercase alphanumeric identifier. May contain hyphens and underscores."
-        ),
-    ),
-]
 
 
 class AclRoleIn(BaseModel):
@@ -80,7 +68,9 @@ class AclOut(BaseModel):
 class NamespaceIn(BaseModel):
     """Request body for namespace creation.
 
-    :param name: Namespace identifier.
+    :param name: Human-readable namespace name.  The server
+        derives a URL-safe slug from this value, which is used
+        as the filesystem directory name and URL path segment.
     :param public_read: Allow unauthenticated read access.
     :param browsable: Allow unauthenticated listing without
         granting documentation access.
@@ -90,7 +80,14 @@ class NamespaceIn(BaseModel):
         with named groups used for sort-tuple construction.
     """
 
-    name: _NamePattern
+    name: str = Field(
+        min_length=1,
+        max_length=200,
+        description=(
+            "Human-readable namespace name. "
+            "The server slugifies this into a URL-safe identifier."
+        ),
+    )
     public_read: bool = Field(
         default=False,
         description=("Allow unauthenticated read access to this namespace."),
@@ -120,7 +117,10 @@ class NamespaceIn(BaseModel):
 class NamespaceOut(BaseModel):
     """Namespace representation returned by the API.
 
-    :param name: Namespace identifier.
+    :param name: URL-safe slug used as the filesystem directory
+        name and URL path segment.
+    :param display_name: Original human-readable name supplied at
+        creation time.  Falls back to ``name`` when not set.
     :param public_read: Whether the namespace is publicly
         readable.
     :param browsable: Whether the namespace is publicly listable.
@@ -132,6 +132,7 @@ class NamespaceOut(BaseModel):
     """
 
     name: str
+    display_name: str = ""
     public_read: bool = False
     browsable: bool = True
     versioning: str = ""

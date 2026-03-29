@@ -360,3 +360,146 @@ def test_get_namespace_meta_returns_creator_display_name(
     )
     meta = storage.get_namespace_meta("ns-meta-dn")
     assert meta.get("creator_display_name") == "Meta Owner"
+
+
+def test_create_namespace_stores_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure create_namespace writes display_name to namespace.toml."""
+    import tomllib
+
+    storage.create_namespace(
+        "my-ns",
+        creator="user@example.com",
+        display_name="My Namespace",
+    )
+    ns_dir = storage.namespace_dir("my-ns")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("display_name") == "My Namespace"
+
+
+def test_create_namespace_ns_display_name_omitted(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure display_name is absent from toml when not supplied."""
+    import tomllib
+
+    storage.create_namespace("ns-no-disp", creator="user@example.com")
+    ns_dir = storage.namespace_dir("ns-no-disp")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert "display_name" not in data
+
+
+def test_get_namespace_meta_returns_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure get_namespace_meta returns the display_name field."""
+    storage.create_namespace(
+        "ns-disp",
+        creator="user@example.com",
+        display_name="Display Name",
+    )
+    meta = storage.get_namespace_meta("ns-disp")
+    assert meta.get("display_name") == "Display Name"
+
+
+def test_update_namespace_acl_preserves_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure update_namespace_acl preserves display_name."""
+    import tomllib
+
+    storage.create_namespace(
+        "ns-acl-disp",
+        creator="user@example.com",
+        display_name="ACL Namespace",
+    )
+    storage.update_namespace_acl("ns-acl-disp", "editors", True, True)
+    ns_dir = storage.namespace_dir("ns-acl-disp")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("display_name") == "ACL Namespace"
+
+
+def test_transfer_ownership_preserves_namespace_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure transfer_ownership preserves namespace display_name."""
+    import tomllib
+
+    storage.create_namespace(
+        "ns-xfer-disp",
+        creator="old-user",
+        display_name="Xfer Namespace",
+    )
+    storage.transfer_ownership("ns-xfer-disp", "new-user")
+    ns_dir = storage.namespace_dir("ns-xfer-disp")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("display_name") == "Xfer Namespace"
+
+
+def test_create_project_writes_project_toml(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure create_project writes project.toml with display_name."""
+    import tomllib
+
+    storage.create_namespace("ns-proj-toml")
+    storage.create_project(
+        "ns-proj-toml", "my-proj", display_name="My Project"
+    )
+    proj_dir = (
+        storage.namespace_dir("ns-proj-toml") / "projects" / "my-proj"
+    )
+    with open(proj_dir / "project.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("display_name") == "My Project"
+
+
+def test_create_project_no_display_name_uses_slug(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure project.toml display_name defaults to the slug."""
+    import tomllib
+
+    storage.create_namespace("ns-slug-default")
+    storage.create_project("ns-slug-default", "my-slug")
+    proj_dir = (
+        storage.namespace_dir("ns-slug-default")
+        / "projects"
+        / "my-slug"
+    )
+    with open(proj_dir / "project.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("display_name") == "my-slug"
+
+
+def test_get_project_meta_returns_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure get_project_meta returns the display_name field."""
+    storage.create_namespace("ns-pmeta")
+    storage.create_project(
+        "ns-pmeta", "p-meta", display_name="Project Meta"
+    )
+    meta = storage.get_project_meta("ns-pmeta", "p-meta")
+    assert meta.get("display_name") == "Project Meta"
+
+
+def test_get_project_meta_missing_toml_returns_empty(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure get_project_meta returns empty dict for missing toml."""
+    storage.create_namespace("ns-pmeta-missing")
+    # Manually create directory without project.toml
+    proj_dir = (
+        storage.namespace_dir("ns-pmeta-missing")
+        / "projects"
+        / "bare-proj"
+    )
+    (proj_dir / "versions").mkdir(parents=True)
+    meta = storage.get_project_meta("ns-pmeta-missing", "bare-proj")
+    assert meta == {}

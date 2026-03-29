@@ -2,6 +2,7 @@ const BASE = '/api'
 
 export interface Namespace {
   name: string
+  display_name: string
   public_read: boolean
   browsable: boolean
   versioning: string
@@ -11,6 +12,7 @@ export interface Namespace {
 
 export interface Project {
   name: string
+  display_name: string
 }
 
 export interface VersionInfo {
