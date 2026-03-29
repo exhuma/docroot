@@ -40,6 +40,21 @@ docker compose up -d
 
 Full documentation: <https://docroot.readthedocs.io/>
 
+## Why Docroot?
+
+Hosting internal documentation should not require a hosted
+service or a specific build tool.  Docroot is a self-hosted
+alternative for teams whose docs must stay on-site — with
+proper authentication, namespace isolation, and role-based
+access control.
+
+It accepts any ZIP archive containing an `index.html`, so it
+works with MkDocs, Sphinx, TypeDoc, JavaDoc, VitePress,
+Pelican, Eleventy, and any other static generator.
+
+See the [Background](https://docroot.readthedocs.io/en/latest/about/)
+page for the full history and design rationale.
+
 ## Repository layout
 
 | Path | Contents |

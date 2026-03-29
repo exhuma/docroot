@@ -17,6 +17,7 @@ Upload versioned documentation archives (ZIP files containing
    :hidden:
    :maxdepth: 2
 
+   about
    user/index
    operator/index
    developer/index
@@ -70,3 +71,4 @@ Who Are You?
 * **Automating via API / CI-CD** → :doc:`user/integrator`
 * **Deploying this service** → :doc:`operator/index`
 * **Contributing code** → :doc:`developer/index`
+* **Why this project exists** → :doc:`about`
