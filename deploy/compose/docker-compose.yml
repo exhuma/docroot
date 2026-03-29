@@ -2,20 +2,58 @@ version: "3.9"
 
 services:
   api:
-    image: python:3.12-slim
-    command: ["sh", "-c", "echo 'api scaffold only'; sleep infinity"]
+    build:
+      context: ../../apps/backend
+    environment:
+      - DOCROOT_API_DATA_ROOT=/data
+      - DOCROOT_API_OAUTH_JWKS_URL=${DOCROOT_API_OAUTH_JWKS_URL}
+      - DOCROOT_API_OAUTH_AUDIENCE=${DOCROOT_API_OAUTH_AUDIENCE}
+      - DOCROOT_API_OAUTH_ROLE_EXTRACTOR=${DOCROOT_API_OAUTH_ROLE_EXTRACTOR:-keycloak}
+      - DOCROOT_API_CORS_ORIGINS=${DOCROOT_API_CORS_ORIGINS:-*}
+      - DOCROOT_API_COOKIE_SECURE=${DOCROOT_API_COOKIE_SECURE:-false}
     volumes:
       - data:/data
+      - ../dev/jwks.json:/jwks.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://localhost:8000/readyz', timeout=2)
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   nginx:
     build:
-      context: ../../apps/nginx
+      context: ../../apps
+      dockerfile: nginx/Dockerfile
+      args:
+        # Injected into the frontend SPA at build time.
+        # Override via env vars (the Taskfile sets dev dummies).
+        VITE_GITHUB_REPO_URL: ${VITE_GITHUB_REPO_URL:-}
+        VITE_APP_COMMIT: ${VITE_APP_COMMIT:-}
+        VITE_APP_BUILD_TIME: ${VITE_APP_BUILD_TIME:-}
     ports:
       - "80:80"
     depends_on:
       - api
+    environment:
+      - DOCROOT_WEB_OIDC_ISSUER=${DOCROOT_WEB_OIDC_ISSUER:-}
+      - DOCROOT_WEB_OIDC_CLIENT_ID=${DOCROOT_WEB_OIDC_CLIENT_ID:-}
     volumes:
       - data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   data:

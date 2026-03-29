@@ -142,3 +142,14 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+
+# Local development data and environment
+deploy/dev/data/
+deploy/dev/.env
+
+# Sphinx build output
+docs/_build/

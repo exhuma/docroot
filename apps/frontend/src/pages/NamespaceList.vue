@@ -1,0 +1,205 @@
+<template>
+  <v-app-bar>
+    <v-img class="ml-2 mr-1" height="36" max-width="110" src="@/assets/logo.svg" />
+    <v-toolbar-title>{{ t('namespaces') }}</v-toolbar-title>
+    <v-spacer />
+    <v-btn icon="mdi-help-circle-outline" :title="t('userManual')" :to="'/manual'" />
+    <v-select
+      v-model="uiLocale"
+      class="mr-2"
+      density="compact"
+      hide-details
+      :items="uiLocales"
+      :label="t('language')"
+      style="max-width: 120px"
+      variant="outlined"
+    />
+    <AuthBar />
+    <v-progress-linear v-if="loading" absolute color="primary" indeterminate location="bottom" />
+  </v-app-bar>
+
+  <v-container>
+    <v-alert v-if="error" class="mb-4" type="error">
+      {{ error }}
+    </v-alert>
+
+    <v-list v-if="namespaces.length > 0">
+      <v-list-item
+        v-for="ns in namespaces"
+        :key="ns.name"
+        link
+        :subtitle="ns.creator ? t('createdBy', { creator: creatorLabel(ns) }) : undefined"
+        :title="ns.display_name || ns.name"
+        :to="`/${ns.name}`"
+      >
+        <template #append>
+          <v-chip v-if="ns.public_read" class="mr-2" color="success" density="compact" size="small">
+            {{ t('publicRead') }}
+          </v-chip>
+          <v-chip
+            v-else-if="ns.browsable && !ns.public_read"
+            class="mr-2"
+            color="info"
+            density="compact"
+            size="small"
+          >
+            {{ t('browsable') }}
+          </v-chip>
+          <v-btn
+            v-if="isAuthenticated()"
+            class="mr-1"
+            density="compact"
+            icon="mdi-shield-account"
+            size="small"
+            :title="t('manageAccess')"
+            variant="text"
+            @click.prevent="openAcl(ns.name)"
+          />
+          <v-btn
+            v-if="isAuthenticated() && ns.creator !== currentSub"
+            density="compact"
+            size="small"
+            variant="text"
+            @click.prevent="onTakeOwnership(ns.name)"
+          >
+            {{ t('takeOwnership') }}
+          </v-btn>
+        </template>
+      </v-list-item>
+    </v-list>
+
+    <template v-else-if="!loading">
+      <ProseContent class="mb-4" />
+    </template>
+
+    <v-alert v-if="!isAuthenticated()" class="mt-4" density="compact" type="info" variant="tonal">
+      {{ t('hiddenNamespacesNotice') }}
+    </v-alert>
+
+    <v-btn class="mt-4" color="primary" prepend-icon="mdi-plus" @click="createDialog = true">
+      {{ t('create') }}
+    </v-btn>
+  </v-container>
+
+  <v-dialog v-model="createDialog" max-width="400">
+    <v-card :title="t('namespaces')">
+      <v-card-text>
+        <v-text-field v-model="newName" autofocus :label="t('name')" variant="outlined" />
+        <v-checkbox v-model="newPublicRead" :label="t('publicRead')" />
+        <v-checkbox v-model="newBrowsable" :label="t('browsable')" />
+        <v-alert v-if="!isAuthenticated()" density="compact" type="warning">
+          {{ t('loginRequired') }}
+        </v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn @click="createDialog = false">
+          {{ t('back') }}
+        </v-btn>
+        <v-btn color="primary" :disabled="!newName || !isAuthenticated()" @click="onCreate">
+          {{ t('create') }}
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <AclDialog v-model="aclDialog" :namespace="aclNamespace" />
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { api, type Namespace } from '@/api'
+import { getDisplayName, getSubject, isAuthenticated, token } from '@/auth'
+import AclDialog from '@/components/AclDialog.vue'
+import AuthBar from '@/components/AuthBar.vue'
+import ProseContent from '@/components/ProseContent.vue'
+
+const { t, locale } = useI18n()
+
+const uiLocales = ['en', 'fr', 'de']
+const uiLocale = ref(locale.value)
+
+watch(uiLocale, (v) => {
+  locale.value = v
+})
+
+const namespaces = ref<Namespace[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
+const createDialog = ref(false)
+const newName = ref('')
+const newPublicRead = ref(false)
+const newBrowsable = ref(true)
+const aclDialog = ref(false)
+const aclNamespace = ref('')
+
+/** Current user's subject claim, computed reactively. */
+const currentSub = computed(() => getSubject() ?? '')
+
+/**
+ * Return a human-readable label for a namespace creator.
+ *
+ * When the stored ``sub`` matches the current user's subject the
+ * display name from the JWT (``name`` / ``preferred_username`` /
+ * ``email`` / ``sub``) is returned so the UI shows a friendly name
+ * rather than a raw identifier — the IDP always has precedence for
+ * the current user.  For other users the stored
+ * ``creator_display_name`` is used when available, falling back to
+ * the raw ``sub`` value.
+ *
+ * The ``||`` chain intentionally falls through on empty strings so
+ * that any missing or blank value is replaced by the next fallback.
+ */
+function creatorLabel(ns: Namespace): string {
+  if (ns.creator === currentSub.value) {
+    // IDP has precedence: use live display name from the JWT.
+    return getDisplayName() || ns.creator_display_name || ns.creator
+  }
+  // Use the weak-reference display name stored at creation/takeover.
+  return ns.creator_display_name || ns.creator
+}
+
+async function load() {
+  loading.value = true
+  error.value = null
+  try {
+    namespaces.value = await api.listNamespaces(token.value)
+  } catch (error_) {
+    error.value = (error_ as Error).message
+  } finally {
+    loading.value = false
+  }
+}
+
+async function onCreate() {
+  if (!newName.value || !token.value) return
+  try {
+    await api.createNamespace(newName.value, token.value, newPublicRead.value, newBrowsable.value)
+    createDialog.value = false
+    newName.value = ''
+    newPublicRead.value = false
+    newBrowsable.value = true
+    await load()
+  } catch (error_) {
+    error.value = (error_ as Error).message
+  }
+}
+
+async function onTakeOwnership(name: string) {
+  if (!token.value) return
+  try {
+    await api.transferOwnership(name, token.value)
+    await load()
+  } catch (error_) {
+    error.value = (error_ as Error).message
+  }
+}
+
+function openAcl(name: string) {
+  aclNamespace.value = name
+  aclDialog.value = true
+}
+
+onMounted(load)
+</script>

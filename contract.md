@@ -82,9 +82,15 @@ Project directory:
 
 ```
 /data/namespaces/<namespace>/projects/<project>/
-  project.toml (optional placeholder)
+  project.toml
   versions/
   latest -> <version> (symlink if exists)
+```
+
+`project.toml` fields:
+
+```
+display_name = "<human-readable project name>"
 ```
 
 Version directory:
@@ -105,18 +111,40 @@ Namespace directory:
   projects/
 ```
 
+`namespace.toml` top-level fields include:
+
+```
+creator = "<subject>"
+creator_display_name = "<display name>"
+display_name = "<human-readable namespace name>"
+versioning = "<scheme>"
+```
+
 ---
 
 # 4. Naming Rules
 
-Namespace:
+Namespace and project names accept free-form UTF-8 text (the
+*display name*).  The server derives a URL-safe *slug* from the
+display name by:
+
+1. Applying NFKD Unicode normalisation and stripping combining marks.
+2. Lowercasing.
+3. Replacing any run of characters outside `[a-z0-9_]` with a
+   single hyphen.
+4. Stripping leading and trailing hyphens.
+
+The slug is used as the filesystem directory name and URL path
+segment.  The display name is stored in the respective TOML file.
+A 400 error is returned when no alphanumeric characters remain after
+slugification.
+
+Display name constraints:
 
 ```
-[a-z0-9][a-z0-9-_]*
+min_length = 1
+max_length = 200
 ```
-
-Project:
-Same as namespace.
 
 Version:
 
@@ -313,6 +341,9 @@ Requirements:
 No session storage.
 Stateless only.
 
+A stateless browser cookie carrying a JWT for nginx auth bridging is
+permitted. This does not constitute server-side session storage.
+
 ---
 
 # 10. Static Hosting Rules
@@ -325,10 +356,22 @@ Public route:
 
 nginx responsibilities:
 
-* Serve static files from `/data`
-* Rate limit upload endpoints
-* Enforce max body size
-* Optional sub_filter rewriting (feature toggle via config)
+* Serve static files from `/data` after authorization is
+  confirmed via `auth_request`.
+* Delegate every static-file request to `GET /api/auth`
+  (FastAPI) before serving.  Access is denied if FastAPI
+  returns 401 or 403.
+* Rate limit upload endpoints.
+* Enforce max body size.
+* Optional sub_filter rewriting (feature toggle via config).
+
+FastAPI responsibilities:
+
+* Expose `GET /api/auth` as the nginx `auth_request` gate.
+* Extract the namespace from the ``X-Original-URI`` header
+  and evaluate the namespace ACL.
+* Return 200 (allow), 401 (unauthenticated), or 403
+  (forbidden).
 
 FastAPI must not serve large static files directly.
 
@@ -362,6 +405,16 @@ UI internationalization:
 
 UI must rely entirely on REST API.
 No filesystem assumptions.
+
+### OIDC UI Mode
+
+When OIDC login is enabled:
+
+* The browser UI acts as a separate OIDC public client.
+* The UI uses Authorization Code + PKCE.
+* The API remains a stateless JWT resource server.
+* Any cookie used for docs access is a stateless browser-to-nginx
+  bridge and not server-side session storage.
 
 ---
 
@@ -449,14 +502,19 @@ System is complete when:
 * Version+locale artifacts are immutable.
 * Latest symlink works.
 * Static hosting works under prefixed locale-aware route.
-* ACL enforcement works.
+* ACL enforcement works for both API and static file routes.
+* Static documentation requests are gated by nginx
+  ``auth_request`` delegating to ``GET /api/auth``.
 * Public namespaces work without JWT.
-* Locale-aware resolution and fallback work (requested -> `en` -> any -> 404).
+* Locale-aware resolution and fallback work
+  (requested -> `en` -> any -> 404).
 * Missing locale is shown gently in UI when fallback is used.
 * Invalid uploads are rejected safely.
-* System runs as a multi-container stack with one process per container.
+* System runs as a multi-container stack with one process per
+  container.
 * Restart does not lose data.
-* Multiple versions share files via hardlinks (verified by inode).
+* Multiple versions share files via hardlinks (verified by
+  inode).
 
 ---
 

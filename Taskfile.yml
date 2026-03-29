@@ -1,0 +1,186 @@
+# https://taskfile.dev
+version: '3'
+
+vars:
+  DEV_ENV: deploy/dev/.env
+  DEV_DATA: deploy/dev/data
+
+tasks:
+  # ----------------------------------------------------------------
+  # Development servers
+  # ----------------------------------------------------------------
+
+  dev:api:
+    desc: Start the FastAPI backend in development mode
+    dir: apps/backend
+    dotenv:
+      - '../../{{.DEV_ENV}}'
+    cmds:
+      - uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+  dev:frontend:
+    desc: Start the Vite frontend dev server (proxies /api to :8000)
+    dir: apps/frontend
+    cmds:
+      - npm run dev -- --host 0.0.0.0
+
+  dev:
+    desc: Start API and frontend dev servers in parallel
+    deps:
+      - dev:api
+      - dev:frontend
+
+  # ----------------------------------------------------------------
+  # Development auth
+  # ----------------------------------------------------------------
+
+  gen-token:
+    desc: >
+      Generate a dev JWT token.
+      Override subject/roles/audience with CLI vars:
+        task gen-token -- --sub alice --roles editor,viewer
+    dir: '.'
+    cmds:
+      - uv run --project apps/backend scripts/gen_dev_token.py {{.CLI_ARGS}}
+
+  # ----------------------------------------------------------------
+  # Build
+  # ----------------------------------------------------------------
+
+  build:frontend:
+    desc: Build the Vue frontend for production
+    dir: apps/frontend
+    cmds:
+      - npm run build-only
+
+  build:
+    desc: Build all production artefacts
+    deps:
+      - build:frontend
+
+  # ----------------------------------------------------------------
+  # Install / setup
+  # ----------------------------------------------------------------
+
+  install:frontend:
+    desc: Install frontend npm dependencies
+    dir: apps/frontend
+    cmds:
+      - npm ci
+
+  install:backend:
+    desc: Install backend Python dependencies
+    dir: apps/backend
+    cmds:
+      - uv sync --extra dev
+
+  install:
+    desc: Install all dependencies
+    deps:
+      - install:frontend
+      - install:backend
+
+  setup:dev:
+    desc: >
+      Create the local dev .env file from the example
+      (skips if it already exists)
+    status:
+      - test -f {{.DEV_ENV}}
+    cmds:
+      - cp deploy/dev/.env.example {{.DEV_ENV}}
+      - echo "Created {{.DEV_ENV}} — edit it if needed."
+
+  # ----------------------------------------------------------------
+  # Quality gates
+  # ----------------------------------------------------------------
+
+  lint:
+    desc: Lint the frontend
+    dir: apps/frontend
+    cmds:
+      - npm run lint
+
+  lint:fix:
+    desc: Auto-fix frontend lint issues
+    dir: apps/frontend
+    cmds:
+      - npm run lint:fix
+
+  lint:python:
+    desc: Check Python code with ruff (lint + format check)
+    dir: apps/backend
+    cmds:
+      - uv run ruff check .
+      - uv run ruff format --check .
+
+  type-check:
+    desc: Run frontend TypeScript type-check
+    dir: apps/frontend
+    cmds:
+      - npm run type-check
+
+  test:backend:
+    desc: Run backend tests
+    dir: apps/backend
+    cmds:
+      - uv run pytest
+
+  test:
+    desc: Run all tests
+    deps:
+      - test:backend
+
+  format:python:
+    desc: Auto-format Python code with ruff
+    dir: apps/backend
+    cmds:
+      - uv run ruff format .
+      - uv run ruff check --fix .
+
+  format:frontend:
+    desc: Auto-format Vue/TS/JS files with prettier
+    dir: apps/frontend
+    cmds:
+      - npm run format
+
+  format:
+    desc: Auto-format all code (Python + frontend)
+    deps:
+      - format:python
+      - format:frontend
+
+  hooks:check:
+    desc: Run all pre-commit hooks against all files
+    cmds:
+      - pre-commit run --all-files
+
+  ci:
+    desc: Full CI pipeline (lint + type-check + build + test)
+    cmds:
+      - task: lint:python
+      - task: lint
+      - task: type-check
+      - task: build:frontend
+      - task: test:backend
+
+  stack-up:
+    desc: Bring a prod-similar stack up for local testing
+    env:
+      # Dummy metadata injected into the SPA build so the
+      # GitHub link and commit badge render in local testing.
+      VITE_GITHUB_REPO_URL: 'https://github.com/example/docroot'
+      VITE_APP_COMMIT: 'dev-local'
+      VITE_APP_BUILD_TIME:
+        sh: date -u +%Y-%m-%dT%H:%M:%SZ
+    cmds:
+      - docker compose
+        -f deploy/compose/docker-compose.yml
+        -f deploy/compose/docker-compose.dev.yml
+        up --build
+
+  stack-down:
+    desc: Bring the prod-similar stack for local testing down
+    cmds:
+      - docker compose
+        -f deploy/compose/docker-compose.yml
+        -f deploy/compose/docker-compose.dev.yml down

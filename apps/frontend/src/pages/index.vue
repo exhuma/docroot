@@ -1,7 +1,7 @@
 <template>
-  <HelloWorld />
+  <NamespaceList />
 </template>
 
 <script lang="ts" setup>
-  import HelloWorld from '@/components/HelloWorld.vue'
+import NamespaceList from '@/pages/NamespaceList.vue'
 </script>
