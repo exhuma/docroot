@@ -126,6 +126,9 @@ class NamespaceOut(BaseModel):
     :param browsable: Whether the namespace is publicly listable.
     :param versioning: Configured versioning scheme.
     :param creator: Subject of the namespace creator.
+    :param creator_display_name: Human-readable name for the
+        creator.  Stored as a weak-reference at creation or
+        ownership transfer time; may be out of sync with the IDP.
     """
 
     name: str
@@ -133,3 +136,4 @@ class NamespaceOut(BaseModel):
     browsable: bool = True
     versioning: str = ""
     creator: str = ""
+    creator_display_name: str = ""

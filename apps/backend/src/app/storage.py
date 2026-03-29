@@ -70,6 +70,7 @@ def _write_namespace_toml(
     roles: list[dict[str, object]],
     versioning: str = "",
     browsable: bool = True,
+    creator_display_name: str = "",
 ) -> None:
     """Write the namespace.toml access-control file.
 
@@ -80,10 +81,16 @@ def _write_namespace_toml(
     :param versioning: Optional versioning scheme name or regex.
     :param browsable: Whether unauthenticated callers may list
         this namespace and its contents without gaining doc access.
+    :param creator_display_name: Human-readable name for the
+        creator, stored as a weak-reference.  May be out of sync
+        with the IDP; IDP values always take precedence.
     """
     lines: list[str] = []
     escaped_creator = creator.replace("\\", "\\\\").replace('"', '\\"')
     lines.append(f'creator = "{escaped_creator}"')
+    if creator_display_name:
+        escaped_dn = creator_display_name.replace("\\", "\\\\").replace('"', '\\"')
+        lines.append(f'creator_display_name = "{escaped_dn}"')
     if versioning:
         escaped_v = versioning.replace("\\", "\\\\").replace('"', '\\"')
         lines.append(f'versioning = "{escaped_v}"')
@@ -254,11 +261,14 @@ class FilesystemStorage:
         roles: list[dict[str, object]] | None = None,
         versioning: str = "",
         browsable: bool = True,
+        creator_display_name: str = "",
     ) -> None:
         """Create a namespace directory with a default ACL file.
 
         The creator is stored in namespace.toml and automatically
         granted write access (in addition to any supplied roles).
+        The ``creator_display_name`` is stored as a weak-reference
+        for display purposes; the IDP always has precedence.
 
         :param name: Namespace name.
         :param creator: Subject of the creating user.
@@ -267,6 +277,8 @@ class FilesystemStorage:
         :param versioning: Versioning scheme name or regex string.
         :param browsable: Whether unauthenticated callers may list
             this namespace without gaining doc access.
+        :param creator_display_name: Human-readable name for the
+            creator stored as a weak-reference.
         """
         ns_dir = self._namespace_dir(name)
         ns_dir.mkdir(parents=True, exist_ok=True)
@@ -281,6 +293,7 @@ class FilesystemStorage:
                 roles=all_roles,
                 versioning=versioning,
                 browsable=browsable,
+                creator_display_name=creator_display_name,
             )
         _log.info("Namespace created: %s", name)
 
@@ -709,6 +722,7 @@ class FilesystemStorage:
             raise NamespaceNotFound(namespace)
         meta = self.get_namespace_meta(namespace)
         creator = str(meta.get("creator", ""))
+        creator_display_name = str(meta.get("creator_display_name", ""))
         versioning = str(meta.get("versioning", ""))
         access = meta.get("access", {})
         if not isinstance(access, dict):
@@ -730,6 +744,7 @@ class FilesystemStorage:
             roles=roles,
             versioning=versioning,
             browsable=browsable,
+            creator_display_name=creator_display_name,
         )
 
     def remove_namespace_role(self, namespace: str, role: str) -> None:
@@ -744,6 +759,7 @@ class FilesystemStorage:
             raise NamespaceNotFound(namespace)
         meta = self.get_namespace_meta(namespace)
         creator = str(meta.get("creator", ""))
+        creator_display_name = str(meta.get("creator_display_name", ""))
         versioning = str(meta.get("versioning", ""))
         access = meta.get("access", {})
         if not isinstance(access, dict):
@@ -762,6 +778,7 @@ class FilesystemStorage:
             roles=roles,
             versioning=versioning,
             browsable=browsable,
+            creator_display_name=creator_display_name,
         )
 
     def update_namespace_flags(
@@ -785,6 +802,7 @@ class FilesystemStorage:
             raise NamespaceNotFound(namespace)
         meta = self.get_namespace_meta(namespace)
         creator = str(meta.get("creator", ""))
+        creator_display_name = str(meta.get("creator_display_name", ""))
         versioning = str(meta.get("versioning", ""))
         access = meta.get("access", {})
         if not isinstance(access, dict):
@@ -799,16 +817,25 @@ class FilesystemStorage:
             roles=roles,
             versioning=versioning,
             browsable=browsable,
+            creator_display_name=creator_display_name,
         )
 
-    def transfer_ownership(self, namespace: str, new_owner: str) -> None:
+    def transfer_ownership(
+        self,
+        namespace: str,
+        new_owner: str,
+        new_owner_display_name: str = "",
+    ) -> None:
         """Transfer namespace ownership to a new owner.
 
         Rewrites namespace.toml preserving all other fields while
-        updating only the ``creator`` field.
+        updating the ``creator`` and ``creator_display_name``
+        fields.
 
         :param namespace: Namespace name.
         :param new_owner: Subject of the new owner.
+        :param new_owner_display_name: Human-readable name for the
+            new owner, stored as a weak-reference.
         :raises NamespaceNotFound: If the namespace does not exist.
         """
         ns_dir = self._namespace_dir(namespace)
@@ -831,6 +858,7 @@ class FilesystemStorage:
             roles=roles,
             versioning=versioning,
             browsable=browsable,
+            creator_display_name=new_owner_display_name,
         )
         _log.info(
             "Namespace ownership transferred: %s -> %s",

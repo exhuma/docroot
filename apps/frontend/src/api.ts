@@ -6,6 +6,7 @@ export interface Namespace {
   browsable: boolean
   versioning: string
   creator: string
+  creator_display_name: string
 }
 
 export interface Project {

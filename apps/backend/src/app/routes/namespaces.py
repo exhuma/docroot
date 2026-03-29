@@ -68,6 +68,7 @@ async def list_namespaces(
             )
             versioning = str(meta.get("versioning", ""))
             creator = str(meta.get("creator", ""))
+            creator_display_name = str(meta.get("creator_display_name", ""))
             result.append(
                 NamespaceOut(
                     name=name,
@@ -75,6 +76,7 @@ async def list_namespaces(
                     browsable=browsable,
                     versioning=versioning,
                     creator=creator,
+                    creator_display_name=creator_display_name,
                 )
             )
     return result
@@ -107,6 +109,7 @@ async def create_namespace(
         roles=roles,
         versioning=body.versioning,
         browsable=body.browsable,
+        creator_display_name=auth.display_name,
     )
     return NamespaceOut(
         name=body.name,
@@ -114,6 +117,7 @@ async def create_namespace(
         browsable=body.browsable,
         versioning=body.versioning,
         creator=auth.subject,
+        creator_display_name=auth.display_name,
     )
 
 
@@ -322,6 +326,10 @@ async def transfer_namespace_owner(
         raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
     try:
-        storage.transfer_ownership(namespace, auth.subject)
+        storage.transfer_ownership(
+            namespace,
+            auth.subject,
+            new_owner_display_name=auth.display_name,
+        )
     except NamespaceNotFound:
         raise HTTPException(status_code=404, detail="Namespace not found")

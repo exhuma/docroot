@@ -27,7 +27,7 @@
         v-for="ns in namespaces"
         :key="ns.name"
         link
-        :subtitle="ns.creator ? t('createdBy', { creator: creatorLabel(ns.creator) }) : undefined"
+        :subtitle="ns.creator ? t('createdBy', { creator: creatorLabel(ns) }) : undefined"
         :title="ns.name"
         :to="`/${ns.name}`"
       >
@@ -140,14 +140,21 @@ const currentSub = computed(() => getSubject() ?? '')
  * When the stored ``sub`` matches the current user's subject the
  * display name from the JWT (``name`` / ``preferred_username`` /
  * ``email`` / ``sub``) is returned so the UI shows a friendly name
- * rather than a raw identifier.  For other users the stored sub
- * value is returned unchanged.
+ * rather than a raw identifier — the IDP always has precedence for
+ * the current user.  For other users the stored
+ * ``creator_display_name`` is used when available, falling back to
+ * the raw ``sub`` value.
+ *
+ * The ``||`` chain intentionally falls through on empty strings so
+ * that any missing or blank value is replaced by the next fallback.
  */
-function creatorLabel(sub: string): string {
-  if (sub === currentSub.value) {
-    return getDisplayName() ?? sub
+function creatorLabel(ns: Namespace): string {
+  if (ns.creator === currentSub.value) {
+    // IDP has precedence: use live display name from the JWT.
+    return getDisplayName() || ns.creator_display_name || ns.creator
   }
-  return sub
+  // Use the weak-reference display name stored at creation/takeover.
+  return ns.creator_display_name || ns.creator
 }
 
 async function load() {
