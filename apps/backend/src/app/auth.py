@@ -33,11 +33,15 @@ class AuthContext:
     :param subject: JWT ``sub`` claim (unique user identifier).
     :param roles: Roles extracted by the configured role extractor.
     :param raw_token: The original encoded JWT string.
+    :param display_name: Human-readable name extracted from JWT
+        claims.  Claim priority: ``name`` → ``preferred_username``
+        → ``email`` → ``sub``.
     """
 
     subject: str
     roles: list[str] = field(default_factory=list)
     raw_token: str = ""
+    display_name: str = ""
 
 
 @lru_cache(maxsize=1)
@@ -267,11 +271,21 @@ def validate_token(
             "client_denylist": settings.keycloak_client_denylist,
         },
     )
+    _display_name_claims = ("name", "preferred_username", "email")
+    display_name = ""
+    for claim in _display_name_claims:
+        val = payload.get(claim)
+        if isinstance(val, str) and val:
+            display_name = val
+            break
+    if not display_name:
+        display_name = subject
     _log.debug("Token validated: sub=%s roles=%s", subject, roles)
     return AuthContext(
         subject=subject,
         roles=roles,
         raw_token=token,
+        display_name=display_name,
     )
 
 

@@ -275,3 +275,88 @@ def test_transfer_ownership_not_found(
 
     with pytest.raises(NamespaceNotFound):
         storage.transfer_ownership("no-such-ns", "x@example.com")
+
+
+def test_create_namespace_stores_creator_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure create_namespace persists creator_display_name."""
+    import tomllib
+
+    storage.create_namespace(
+        "ns-dn",
+        creator="uuid-1234",
+        creator_display_name="Alice Example",
+    )
+    ns_dir = storage.namespace_dir("ns-dn")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("creator") == "uuid-1234"
+    assert data.get("creator_display_name") == "Alice Example"
+
+
+def test_create_namespace_no_display_name_omitted(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure creator_display_name is absent when not supplied."""
+    import tomllib
+
+    storage.create_namespace("ns-no-dn", creator="uuid-5678")
+    ns_dir = storage.namespace_dir("ns-no-dn")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert "creator_display_name" not in data
+
+
+def test_transfer_ownership_stores_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure transfer_ownership updates creator_display_name."""
+    import tomllib
+
+    storage.create_namespace(
+        "ns-xfer-dn",
+        creator="old-uuid",
+        creator_display_name="Old Owner",
+    )
+    storage.transfer_ownership(
+        "ns-xfer-dn",
+        "new-uuid",
+        new_owner_display_name="New Owner",
+    )
+    ns_dir = storage.namespace_dir("ns-xfer-dn")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("creator") == "new-uuid"
+    assert data.get("creator_display_name") == "New Owner"
+
+
+def test_update_acl_preserves_creator_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure update_namespace_acl preserves creator_display_name."""
+    import tomllib
+
+    storage.create_namespace(
+        "ns-acl-dn",
+        creator="uuid-acl",
+        creator_display_name="ACL Owner",
+    )
+    storage.update_namespace_acl("ns-acl-dn", "editors", True, True)
+    ns_dir = storage.namespace_dir("ns-acl-dn")
+    with open(ns_dir / "namespace.toml", "rb") as fh:
+        data = tomllib.load(fh)
+    assert data.get("creator_display_name") == "ACL Owner"
+
+
+def test_get_namespace_meta_returns_creator_display_name(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure get_namespace_meta returns creator_display_name."""
+    storage.create_namespace(
+        "ns-meta-dn",
+        creator="uuid-meta",
+        creator_display_name="Meta Owner",
+    )
+    meta = storage.get_namespace_meta("ns-meta-dn")
+    assert meta.get("creator_display_name") == "Meta Owner"

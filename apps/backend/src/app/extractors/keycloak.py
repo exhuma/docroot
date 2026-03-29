@@ -69,9 +69,7 @@ def extract_roles(
     allowlist: list[str] = (
         list(allowlist_raw) if isinstance(allowlist_raw, list) else []
     )
-    denylist: list[str] = (
-        list(denylist_raw) if isinstance(denylist_raw, list) else []
-    )
+    denylist: list[str] = list(denylist_raw) if isinstance(denylist_raw, list) else []
 
     realm_access = payload.get("realm_access")
     if isinstance(realm_access, dict):
@@ -88,9 +86,7 @@ def extract_roles(
                 continue
             client_roles = client_data.get("roles", [])
             if isinstance(client_roles, list):
-                roles.extend(
-                    f"{client_id}/{r}" for r in client_roles
-                )
+                roles.extend(f"{client_id}/{r}" for r in client_roles)
 
     # Deduplicate while preserving order
     seen: set[str] = set()
