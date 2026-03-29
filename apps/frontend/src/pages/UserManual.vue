@@ -13,123 +13,228 @@
       </v-card-text>
     </v-card>
 
+    <!-- Interactive configuration card -->
     <v-card class="mb-6">
       <v-card-title class="text-h5">
-        {{ t('manualBrowsing') }}
+        {{ t('configureExamples') }}
       </v-card-title>
+      <v-card-subtitle>
+        {{ t('configureExamplesHint') }}
+      </v-card-subtitle>
       <v-card-text>
-        <p>{{ t('manualBrowsingText') }}</p>
+        <v-row dense>
+          <v-col cols="12" md="6">
+            <v-text-field
+              v-model="docrootUrl"
+              :label="t('docrootUrl')"
+              density="compact"
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-text-field
+              v-model="idpUrl"
+              :label="t('idpUrl')"
+              :hint="t('idpUrlHint')"
+              density="compact"
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="ciClientId"
+              :label="t('ciClientId')"
+              :hint="t('ciClientIdHint')"
+              density="compact"
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="ciClientSecret"
+              :label="t('ciClientSecret')"
+              :hint="t('ciClientSecretHint')"
+              density="compact"
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="6" md="2">
+            <v-text-field
+              v-model="targetNamespace"
+              :label="t('targetNamespace')"
+              density="compact"
+              variant="outlined"
+            />
+          </v-col>
+          <v-col cols="6" md="2">
+            <v-text-field
+              v-model="targetProject"
+              :label="t('targetProject')"
+              density="compact"
+              variant="outlined"
+            />
+          </v-col>
+        </v-row>
       </v-card-text>
     </v-card>
 
-    <v-card class="mb-6">
-      <v-card-title class="text-h5">
-        {{ t('manualAuthentication') }}
-      </v-card-title>
-      <v-card-text>
-        <p class="mb-3">{{ t('manualAuthText') }}</p>
-        <ol class="ml-4">
-          <li>{{ t('manualAuthStep1') }}</li>
-          <li>{{ t('manualAuthStep2') }}</li>
-          <li>{{ t('manualAuthStep3') }}</li>
-        </ol>
-        <p class="mt-3">{{ t('manualAuthDev') }}</p>
-      </v-card-text>
-    </v-card>
+    <!-- Tabbed use-case sections -->
+    <v-card>
+      <v-tabs v-model="activeTab" color="primary">
+        <v-tab value="browsing">{{ t('tabBrowsing') }}</v-tab>
+        <v-tab value="automated">{{ t('tabAutomated') }}</v-tab>
+        <v-tab value="manual">{{ t('tabManual') }}</v-tab>
+        <v-tab value="acl">{{ t('tabAcl') }}</v-tab>
+        <v-tab value="limitations">{{ t('tabLimitations') }}</v-tab>
+      </v-tabs>
 
-    <v-card class="mb-6">
-      <v-card-title class="text-h5">
-        {{ t('manualUpload') }}
-      </v-card-title>
-      <v-card-text>
-        <p class="mb-3">{{ t('manualUploadText') }}</p>
-        <ul class="ml-4 mb-3">
-          <li>{{ t('manualUploadRule1') }}</li>
-          <li>{{ t('manualUploadRule2') }}</li>
-          <li>{{ t('manualUploadRule3') }}</li>
-          <li>{{ t('manualUploadRule4') }}</li>
-          <li>{{ t('manualUploadRule5') }}</li>
-        </ul>
-        <p class="font-weight-bold mb-1">
-          {{ t('manualUploadCurl') }}
-        </p>
-        <v-sheet class="pa-3 rounded" color="grey-darken-3">
-          <pre class="text-caption text-white">{{ curlUploadExample }}</pre>
-        </v-sheet>
-      </v-card-text>
-    </v-card>
+      <v-window v-model="activeTab">
+        <!-- Browsing tab -->
+        <v-window-item value="browsing">
+          <v-card-text>
+            <p>{{ t('manualBrowsingText') }}</p>
+          </v-card-text>
+        </v-window-item>
 
-    <v-card class="mb-6">
-      <v-card-title class="text-h5">
-        {{ t('manualClientCredentials') }}
-      </v-card-title>
-      <v-card-text>
-        <p class="mb-3">
-          {{ t('manualClientCredentialsText') }}
-        </p>
-        <p class="font-weight-bold mb-1">
-          {{ t('manualClientCredentialsCurl') }}
-        </p>
-        <v-sheet class="pa-3 rounded" color="grey-darken-3">
-          <pre class="text-caption text-white">{{ curlTokenExample }}</pre>
-        </v-sheet>
-        <v-alert class="mt-4" density="compact" type="warning">
-          {{ t('manualClientCredentialsWarning') }}
-        </v-alert>
-      </v-card-text>
-    </v-card>
+        <!-- Automated Upload (CI/CD) tab -->
+        <v-window-item value="automated">
+          <v-card-text>
+            <p class="mb-3">{{ t('manualAutomatedText') }}</p>
+            <ol class="ml-4 mb-4">
+              <li>{{ t('manualAutomatedStep1') }}</li>
+              <li>{{ t('manualAutomatedStep2') }}</li>
+              <li>{{ t('manualAutomatedStep3') }}</li>
+              <li>{{ t('manualAutomatedStep4') }}</li>
+            </ol>
 
-    <v-card class="mb-6">
-      <v-card-title class="text-h5">
-        {{ t('manualAcl') }}
-      </v-card-title>
-      <v-card-text>
-        <p class="mb-3">{{ t('manualAclText') }}</p>
-        <v-sheet class="pa-3 rounded" color="grey-darken-3">
-          <pre class="text-caption text-white">{{ aclExample }}</pre>
-        </v-sheet>
-        <v-alert class="mt-4" density="compact" type="info">
-          {{ t('manualAclAlphaNotice') }}
-        </v-alert>
-      </v-card-text>
+            <p class="text-subtitle-1 font-weight-bold mb-2">
+              {{ t('keycloakSetup') }}
+            </p>
+            <p class="mb-2">{{ t('keycloakSetupText') }}</p>
+            <ol class="ml-4 mb-4">
+              <li>{{ t('keycloakStep1') }}</li>
+              <li>{{ t('keycloakStep2') }}</li>
+              <li>{{ t('keycloakStep3') }}</li>
+            </ol>
+
+            <p class="font-weight-bold mb-1">
+              {{ t('manualClientCredentialsCurl') }}
+            </p>
+            <v-sheet class="pa-3 rounded mb-4" color="grey-darken-3">
+              <pre class="text-caption text-white">{{ curlTokenExample }}</pre>
+            </v-sheet>
+
+            <p class="font-weight-bold mb-1">
+              {{ t('manualUploadCurl') }}
+            </p>
+            <v-sheet class="pa-3 rounded mb-4" color="grey-darken-3">
+              <pre class="text-caption text-white">{{ curlUploadExample }}</pre>
+            </v-sheet>
+
+            <v-alert density="compact" type="warning">
+              {{ t('manualClientCredentialsWarning') }}
+            </v-alert>
+          </v-card-text>
+        </v-window-item>
+
+        <!-- Manual Upload tab -->
+        <v-window-item value="manual">
+          <v-card-text>
+            <p class="mb-3">{{ t('manualAuthText') }}</p>
+            <ol class="ml-4 mb-4">
+              <li>{{ t('manualAuthStep1') }}</li>
+              <li>{{ t('manualAuthStep2') }}</li>
+              <li>{{ t('manualAuthStep3') }}</li>
+            </ol>
+            <p class="mb-3">{{ t('manualUploadText') }}</p>
+            <ul class="ml-4">
+              <li>{{ t('manualUploadRule1') }}</li>
+              <li>{{ t('manualUploadRule2') }}</li>
+              <li>{{ t('manualUploadRule3') }}</li>
+              <li>{{ t('manualUploadRule4') }}</li>
+              <li>{{ t('manualUploadRule5') }}</li>
+            </ul>
+            <p class="mt-3">{{ t('manualAuthDev') }}</p>
+          </v-card-text>
+        </v-window-item>
+
+        <!-- Access Control tab -->
+        <v-window-item value="acl">
+          <v-card-text>
+            <p class="mb-3">{{ t('manualAclText') }}</p>
+            <v-sheet class="pa-3 rounded mb-4" color="grey-darken-3">
+              <pre class="text-caption text-white">{{ aclExample }}</pre>
+            </v-sheet>
+            <v-alert density="compact" type="info">
+              {{ t('manualAclAlphaNotice') }}
+            </v-alert>
+          </v-card-text>
+        </v-window-item>
+
+        <!-- Limitations tab -->
+        <v-window-item value="limitations">
+          <v-card-text>
+            <p class="mb-3">{{ t('manualLimitationsText') }}</p>
+            <ul class="ml-4">
+              <li class="mb-2">{{ t('manualLimitationRole') }}</li>
+              <li class="mb-2">{{ t('manualLimitationSearch') }}</li>
+              <li class="mb-2">{{ t('manualLimitationStorage') }}</li>
+            </ul>
+          </v-card-text>
+        </v-window-item>
+      </v-window>
     </v-card>
   </v-container>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AuthBar from '@/components/AuthBar.vue'
 import ProseContent from '@/components/ProseContent.vue'
 
 const { t } = useI18n()
 
-const curlUploadExample = String.raw`# 1. Obtain a token via client-credentials grant
-TOKEN=$(curl -s -X POST \
-  https://idp.example.com/realms/myrealm/\
-protocol/openid-connect/token \
-  -d grant_type=client_credentials \
-  -d client_id=my-ci-client \
-  -d client_secret=MY_SECRET \
+const activeTab = ref('browsing')
+const docrootUrl = ref('https://docroot.example.com')
+const idpUrl = ref('https://idp.example.com/realms/myrealm')
+const ciClientId = ref('my-ci-client')
+const ciClientSecret = ref('$CLIENT_SECRET')
+const targetNamespace = ref('myns')
+const targetProject = ref('myproject')
+
+const curlTokenExample = computed(
+  () =>
+    `curl -s -X POST \\
+  ${idpUrl.value}/protocol/openid-connect/token \\
+  -d grant_type=client_credentials \\
+  -d client_id=${ciClientId.value} \\
+  -d client_secret=${ciClientSecret.value}`,
+)
+
+const curlUploadExample = computed(
+  () =>
+    `# 1. Obtain a token via client-credentials grant
+TOKEN=$(curl -s -X POST \\
+  ${idpUrl.value}/protocol/openid-connect/token \\
+  -d grant_type=client_credentials \\
+  -d client_id=${ciClientId.value} \\
+  -d client_secret=${ciClientSecret.value} \\
   | jq -r .access_token)
 
 # 2. Upload documentation
-curl -X POST \
-  https://docroot.example.com/api/namespaces/myns/\
-projects/myproject/upload \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "file=@docs.zip" \
-  -F "version=1.0.0" \
-  -F "locale=en" \
-  -F "latest=true"`
+curl -X POST \\
+  ${docrootUrl.value}/api/namespaces/${targetNamespace.value}/projects/${targetProject.value}/upload \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -F "file=@docs.zip" \\
+  -F "version=1.0.0" \\
+  -F "locale=en" \\
+  -F "latest=true"`,
+)
 
-const curlTokenExample = String.raw`curl -s -X POST \
-  https://idp.example.com/realms/myrealm/\
-protocol/openid-connect/token \
-  -d grant_type=client_credentials \
-  -d client_id=my-ci-client \
-  -d client_secret=MY_SECRET`
-
-const aclExample = `# /data/namespaces/myns/namespace.toml
+const aclExample = computed(
+  () =>
+    `# /data/namespaces/${targetNamespace.value}/namespace.toml
 
 creator = "alice"
 versioning = "semver"
@@ -145,7 +250,8 @@ write = true
 [[access.roles]]
 role = "docroot-reader"
 read = true
-write = false`
+write = false`,
+)
 </script>
 
 <style scoped>

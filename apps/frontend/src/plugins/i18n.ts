@@ -108,6 +108,74 @@ const messages = {
     aclBrowsableHint:
       'Allow anyone to browse namespaces, projects and' +
       ' versions without granting documentation access.',
+    tabBrowsing: 'Browsing',
+    tabAutomated: 'Automated Upload (CI/CD)',
+    tabManual: 'Manual Upload',
+    tabAcl: 'Access Control',
+    tabLimitations: 'Limitations',
+    configureExamples: 'Configure Examples',
+    configureExamplesHint:
+      'Enter your values to make the code examples' +
+      ' copy-pastable. You can enter real values or' +
+      ' environment variable names (e.g. $MY_VAR).',
+    docrootUrl: 'Docroot URL',
+    idpUrl: 'IDP / Token URL',
+    idpUrlHint: 'e.g. https://keycloak.example.com/realms/myrealm',
+    ciClientId: 'CI Client ID',
+    ciClientIdHint: 'The service-account client configured in your IDP',
+    ciClientSecret: 'Client Secret',
+    ciClientSecretHint:
+      'Or an env-var reference, e.g. $CLIENT_SECRET',
+    targetNamespace: 'Namespace',
+    targetProject: 'Project',
+    manualAutomatedText:
+      'Use the OAuth2 client-credentials grant for' +
+      ' automated CI/CD uploads. Namespaces must be' +
+      ' set up first, a role must have write access,' +
+      ' and the service account used for automated' +
+      ' uploads must have that role assigned.',
+    manualAutomatedStep1:
+      'Create a namespace and project (once, by an admin).',
+    manualAutomatedStep2:
+      'Create a role with write access in the namespace ACL.',
+    manualAutomatedStep3:
+      'Create a service account (confidential client with' +
+      ' client credentials) in your IDP and assign it' +
+      ' the role.',
+    manualAutomatedStep4:
+      'Use the client credentials flow in your pipeline' +
+      ' to obtain a token, then upload the ZIP.',
+    keycloakSetup: 'Keycloak Setup for CI/CD',
+    keycloakSetupText:
+      'To configure a service account for automated' +
+      ' uploads in Keycloak:',
+    keycloakStep1:
+      'Create a confidential client (e.g. my-ci-client)' +
+      ' with "Service accounts enabled" ON and' +
+      ' "Client authentication" ON.',
+    keycloakStep2:
+      `Under the client's "Service accounts roles" tab,` +
+      ' assign the role that has write access to the' +
+      ' target namespace.',
+    keycloakStep3:
+      'Copy the client secret from the "Credentials" tab' +
+      ' and store it in your CI/CD secret store.',
+    manualLimitationsText:
+      'This is an early beta release. The following' +
+      ' limitations apply:',
+    manualLimitationRole:
+      'Role extraction is only implemented for Keycloak.' +
+      ' OIDC authentication works with any standards-' +
+      'compliant provider (Keycloak, Entra ID, Google),' +
+      ' but ACL enforcement relies on role extraction' +
+      ' which is currently Keycloak-specific. Support' +
+      ' for other providers will be added on demand.',
+    manualLimitationSearch:
+      'There is no full-text search. Documentation is' +
+      ' served as static files without indexing.',
+    manualLimitationStorage:
+      'Storage is filesystem-only. S3 and other object' +
+      ' stores are not supported in this release.',
     githubRepo: 'Source code',
     buildCommit: 'Build',
     buildTime: 'Built at',
@@ -214,6 +282,84 @@ const messages = {
       'Autoriser tout le monde à parcourir les espaces' +
       ' de noms, projets et versions sans accéder à' +
       ' la documentation.',
+    tabBrowsing: 'Navigation',
+    tabAutomated: 'Upload automatisé (CI/CD)',
+    tabManual: 'Upload manuel',
+    tabAcl: "Contrôle d'accès",
+    tabLimitations: 'Limitations',
+    configureExamples: 'Configurer les exemples',
+    configureExamplesHint:
+      'Entrez vos valeurs pour rendre les exemples de' +
+      ' code copiables. Vous pouvez entrer des valeurs' +
+      " réelles ou des noms de variables d'environnement" +
+      ' (ex. $MA_VARIABLE).',
+    docrootUrl: 'URL Docroot',
+    idpUrl: 'URL IDP / Token',
+    idpUrlHint:
+      'ex. https://keycloak.example.com/realms/myrealm',
+    ciClientId: 'ID client CI',
+    ciClientIdHint:
+      'Le client compte de service configuré dans votre IDP',
+    ciClientSecret: 'Secret client',
+    ciClientSecretHint:
+      'Ou une référence de variable, ex. $CLIENT_SECRET',
+    targetNamespace: 'Espace de noms',
+    targetProject: 'Projet',
+    manualAutomatedText:
+      'Utilisez le flux client-credentials OAuth2 pour' +
+      ' les uploads CI/CD automatisés. Les espaces de' +
+      ' noms doivent être créés au préalable, un rôle' +
+      ' doit avoir un accès en écriture, et le compte de' +
+      ' service doit avoir ce rôle.',
+    manualAutomatedStep1:
+      'Créez un espace de noms et un projet (une fois,' +
+      ' par un administrateur).',
+    manualAutomatedStep2:
+      "Créez un rôle avec accès en écriture dans l'ACL" +
+      " de l'espace de noms.",
+    manualAutomatedStep3:
+      'Créez un compte de service (client confidentiel' +
+      ' avec client credentials) dans votre IDP et' +
+      ' attribuez-lui le rôle.',
+    manualAutomatedStep4:
+      'Utilisez le flux client credentials dans votre' +
+      ' pipeline pour obtenir un jeton, puis uploadez' +
+      ' le ZIP.',
+    keycloakSetup: 'Configuration Keycloak pour CI/CD',
+    keycloakSetupText:
+      'Pour configurer un compte de service pour les' +
+      ' uploads automatisés dans Keycloak :',
+    keycloakStep1:
+      'Créez un client confidentiel (ex. my-ci-client)' +
+      ' avec "Comptes de service activés" ON et' +
+      ' "Authentification client" ON.',
+    keycloakStep2:
+      `Dans l'onglet "Rôles des comptes de service"` +
+      ' du client, attribuez le rôle ayant un accès' +
+      " en écriture à l'espace de noms cible.",
+    keycloakStep3:
+      "Copiez le secret client depuis l'onglet" +
+      ` "Informations d'identification" et stockez-le` +
+      ' dans le magasin de secrets CI/CD.',
+    manualLimitationsText:
+      "Il s'agit d'une première version bêta." +
+      " Les limitations suivantes s'appliquent :",
+    manualLimitationRole:
+      "L'extraction des rôles est uniquement implémentée" +
+      " pour Keycloak. L'authentification OIDC fonctionne" +
+      ' avec tout fournisseur conforme (Keycloak, Entra' +
+      " ID, Google), mais l'application des ACL repose" +
+      " sur l'extraction des rôles, actuellement" +
+      " spécifique à Keycloak. Le support d'autres" +
+      ' fournisseurs sera ajouté à la demande.',
+    manualLimitationSearch:
+      "Il n'y a pas de recherche en texte intégral. La" +
+      ' documentation est servie sous forme de fichiers' +
+      ' statiques sans indexation.',
+    manualLimitationStorage:
+      'Le stockage est uniquement sur système de fichiers.' +
+      ' S3 et autres objets de stockage ne sont pas' +
+      ' pris en charge dans cette version.',
     githubRepo: 'Code source',
     buildCommit: 'Version du build',
     buildTime: 'Construit le',
@@ -317,6 +463,84 @@ const messages = {
       'Erlaubt jedem, Namensräume, Projekte und' +
       ' Versionen zu durchsuchen, ohne Zugriff auf' +
       ' die Dokumentation zu erhalten.',
+    tabBrowsing: 'Durchsuchen',
+    tabAutomated: 'Automatisierter Upload (CI/CD)',
+    tabManual: 'Manueller Upload',
+    tabAcl: 'Zugriffskontrolle',
+    tabLimitations: 'Einschränkungen',
+    configureExamples: 'Beispiele konfigurieren',
+    configureExamplesHint:
+      'Geben Sie Ihre Werte ein, damit die' +
+      ' Code-Beispiele direkt kopierbar sind.' +
+      ' Sie können echte Werte oder Namen von' +
+      ' Umgebungsvariablen angeben (z.B. $MEINE_VAR).',
+    docrootUrl: 'Docroot-URL',
+    idpUrl: 'IDP / Token-URL',
+    idpUrlHint:
+      'z.B. https://keycloak.example.com/realms/myrealm',
+    ciClientId: 'CI Client-ID',
+    ciClientIdHint:
+      'Der Dienstkonto-Client in Ihrem IDP',
+    ciClientSecret: 'Client-Secret',
+    ciClientSecretHint:
+      'Oder eine Umgebungsvariable, z.B. $CLIENT_SECRET',
+    targetNamespace: 'Namensraum',
+    targetProject: 'Projekt',
+    manualAutomatedText:
+      'Verwenden Sie den OAuth2 Client-Credentials-Fluss' +
+      ' für automatisierte CI/CD-Uploads. Namensräume' +
+      ' müssen zuerst eingerichtet werden, eine Rolle' +
+      ' muss Schreibzugriff haben und das Dienstkonto' +
+      ' muss diese Rolle haben.',
+    manualAutomatedStep1:
+      'Erstellen Sie einen Namensraum und ein Projekt' +
+      ' (einmalig, durch einen Administrator).',
+    manualAutomatedStep2:
+      'Erstellen Sie eine Rolle mit Schreibzugriff' +
+      ' in der Namespace-ACL.',
+    manualAutomatedStep3:
+      'Erstellen Sie ein Dienstkonto (vertraulicher' +
+      ' Client mit Client Credentials) in Ihrem IDP' +
+      ' und weisen Sie ihm die Rolle zu.',
+    manualAutomatedStep4:
+      'Verwenden Sie den Client-Credentials-Fluss in' +
+      ' Ihrer Pipeline, um ein Token zu erhalten,' +
+      ' und laden Sie dann das ZIP hoch.',
+    keycloakSetup: 'Keycloak-Einrichtung für CI/CD',
+    keycloakSetupText:
+      'So konfigurieren Sie ein Dienstkonto für' +
+      ' automatisierte Uploads in Keycloak:',
+    keycloakStep1:
+      'Erstellen Sie einen vertraulichen Client' +
+      ' (z.B. my-ci-client) mit aktivierten' +
+      ' "Dienstkonten" und "Client-Authentifizierung".',
+    keycloakStep2:
+      'Weisen Sie im Tab "Dienstkonto-Rollen" des Clients' +
+      ' die Rolle zu, die Schreibzugriff auf den' +
+      ' Ziel-Namensraum hat.',
+    keycloakStep3:
+      'Kopieren Sie das Client-Secret aus dem' +
+      ' "Anmeldeinformationen"-Tab und speichern Sie es' +
+      ' in Ihrem CI/CD-Secret-Speicher.',
+    manualLimitationsText:
+      'Dies ist eine frühe Beta-Version.' +
+      ' Folgende Einschränkungen gelten:',
+    manualLimitationRole:
+      'Die Rollenextraktion ist nur für Keycloak' +
+      ' implementiert. Die OIDC-Authentifizierung' +
+      ' funktioniert mit jedem konformen Anbieter' +
+      ' (Keycloak, Entra ID, Google), aber die' +
+      ' ACL-Durchsetzung basiert auf der Rollenextraktion,' +
+      ' die derzeit Keycloak-spezifisch ist. Unterstützung' +
+      ' für andere Anbieter wird nach Bedarf hinzugefügt.',
+    manualLimitationSearch:
+      'Es gibt keine Volltextsuche. Die Dokumentation' +
+      ' wird als statische Dateien ohne Indizierung' +
+      ' bereitgestellt.',
+    manualLimitationStorage:
+      'Der Speicher ist nur dateisystembasiert. S3 und' +
+      ' andere Objektspeicher werden in dieser Version' +
+      ' nicht unterstützt.',
     githubRepo: 'Quellcode',
     buildCommit: 'Build-Version',
     buildTime: 'Erstellt am',
