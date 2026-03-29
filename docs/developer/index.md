@@ -25,6 +25,12 @@ avoid project-external conventions.
 
 ## Documentation Map
 
+- **[Reader guide](../user/reader.md)** — browsing and
+  accessing documentation as an end-user.
+- **[Author guide](../user/author.md)** — publishing
+  documentation via the web UI.
+- **[Integrator guide](../user/integrator.md)** — REST API,
+  CI/CD uploads, and ACL management.
 - **[User guide](../user/index.md)** — UI and API usage in
   production.
 - **[Operator guide](../operator/index.md)** — installation,
@@ -50,4 +56,3 @@ avoid project-external conventions.
 - Maximum line length: 80 characters.
 - Environment variables use the `DOCROOT_` prefix and are
   declared in `app.settings.Settings`.
-

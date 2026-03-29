@@ -11,12 +11,37 @@
 
 ## Quick Start
 
+Create a `docker-compose.yml`:
+
+```yaml
+services:
+  api:
+    image: ghcr.io/exhuma/docroot/backend:latest
+    environment:
+      DOCROOT_API_DATA_ROOT: /data
+      DOCROOT_API_OAUTH_JWKS_URL: ${DOCROOT_API_OAUTH_JWKS_URL}
+      DOCROOT_API_OAUTH_AUDIENCE: ${DOCROOT_API_OAUTH_AUDIENCE}
+    volumes:
+      - docroot_data:/data
+  web:
+    image: ghcr.io/exhuma/docroot/nginx:latest
+    ports:
+      - "80:80"
+    environment:
+      DOCROOT_WEB_OIDC_ISSUER: ${DOCROOT_WEB_OIDC_ISSUER}
+      DOCROOT_WEB_OIDC_CLIENT_ID: ${DOCROOT_WEB_OIDC_CLIENT_ID}
+    volumes:
+      - docroot_data:/data
+volumes:
+  docroot_data:
+```
+
+Create a `.env` file alongside it with your IDP values
+(see the Environment Variables section below),
+then start the stack:
+
 ```bash
-git clone https://github.com/exhuma/docroot.git
-cd docroot
-cp deploy/compose/.env.example deploy/compose/.env
-# Edit deploy/compose/.env — see Environment Variables below
-docker compose -f deploy/compose/docker-compose.yml up
+docker compose up -d
 ```
 
 Open `http://localhost` in a browser.
@@ -391,6 +416,15 @@ After this call the caller becomes the new creator.
 ---
 
 ## Development Setup
+
+To build from source, clone the repository first:
+
+```bash
+git clone https://github.com/exhuma/docroot.git
+cd docroot
+```
+
+Then generate a test token:
 
 ```bash
 task gen-token -- --sub alice --roles editor
