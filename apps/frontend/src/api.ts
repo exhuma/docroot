@@ -74,14 +74,19 @@ export const api = {
     return handleResponse(res) as Promise<Namespace[]>
   },
 
-  async createNamespace(name: string, token: string, publicRead = false): Promise<void> {
+  async createNamespace(
+    name: string,
+    token: string,
+    publicRead = false,
+    browsable = true,
+  ): Promise<void> {
     const res = await fetch(`${BASE}/namespaces`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ name, public_read: publicRead }),
+      body: JSON.stringify({ name, public_read: publicRead, browsable }),
     })
     await handleResponse(res)
   },

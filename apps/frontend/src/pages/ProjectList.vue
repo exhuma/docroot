@@ -1,5 +1,6 @@
 <template>
   <v-app-bar>
+    <v-img src="@/assets/logo.svg" height="36" max-width="110" class="ml-2 mr-1" />
     <v-btn icon="mdi-arrow-left" :to="`/`" />
     <v-toolbar-title> {{ namespace }} — {{ t('projects') }} </v-toolbar-title>
     <v-spacer />

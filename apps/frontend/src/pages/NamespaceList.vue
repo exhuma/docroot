@@ -1,5 +1,6 @@
 <template>
   <v-app-bar>
+    <v-img src="@/assets/logo.svg" height="36" max-width="110" class="ml-2 mr-1" />
     <v-toolbar-title>{{ t('namespaces') }}</v-toolbar-title>
     <v-spacer />
     <v-btn icon="mdi-help-circle-outline" :title="t('userManual')" :to="'/manual'" />
@@ -85,6 +86,7 @@
       <v-card-text>
         <v-text-field v-model="newName" autofocus :label="t('name')" variant="outlined" />
         <v-checkbox v-model="newPublicRead" :label="t('publicRead')" />
+        <v-checkbox v-model="newBrowsable" :label="t('browsable')" />
         <v-alert v-if="!isAuthenticated()" density="compact" type="warning">
           {{ t('loginRequired') }}
         </v-alert>
@@ -128,6 +130,7 @@ const error = ref<string | null>(null)
 const createDialog = ref(false)
 const newName = ref('')
 const newPublicRead = ref(false)
+const newBrowsable = ref(true)
 const aclDialog = ref(false)
 const aclNamespace = ref('')
 
@@ -172,10 +175,11 @@ async function load() {
 async function onCreate() {
   if (!newName.value || !token.value) return
   try {
-    await api.createNamespace(newName.value, token.value, newPublicRead.value)
+    await api.createNamespace(newName.value, token.value, newPublicRead.value, newBrowsable.value)
     createDialog.value = false
     newName.value = ''
     newPublicRead.value = false
+    newBrowsable.value = true
     await load()
   } catch (error_) {
     error.value = (error_ as Error).message
