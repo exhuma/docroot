@@ -1,0 +1,30 @@
+# Namespace configuration example.
+#
+# This file is managed via the web UI or the ACL API.
+# See the operator manual for details.
+
+creator = "alice@example.com"
+# Human-readable label for the creator. Informational only; updated
+# automatically when the creator logs in. May lag behind the IDP.
+creator_display_name = "Alice Example"
+# Human-readable display name for this namespace shown in the UI.
+display_name = "My Project Docs"
+versioning = "semver"
+
+[access]
+# Set to true to allow anyone to read docs without logging in.
+public_read = false
+
+# Allow the namespace to appear in listings even for unauthenticated
+# users, without granting access to the documentation content.
+browsable = true
+
+[[access.roles]]
+role = "docroot-editor"
+read = true
+write = true
+
+[[access.roles]]
+role = "docroot-reader"
+read = true
+write = false

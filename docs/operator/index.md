@@ -16,7 +16,7 @@ Create a `docker-compose.yml`:
 ```yaml
 services:
   api:
-    image: ghcr.io/exhuma/docroot/backend:latest
+    image: ghcr.io/exhuma/docroot/backend:1.0.0
     environment:
       DOCROOT_API_DATA_ROOT: /data
       DOCROOT_API_OAUTH_JWKS_URL: ${DOCROOT_API_OAUTH_JWKS_URL}
@@ -24,7 +24,7 @@ services:
     volumes:
       - docroot_data:/data
   web:
-    image: ghcr.io/exhuma/docroot/nginx:latest
+    image: ghcr.io/exhuma/docroot/nginx:1.0.0
     ports:
       - "80:80"
     environment:
@@ -73,8 +73,8 @@ API container.
 
 | Variable | Default | Description |
 |---|---|---|
-| `DOCROOT_WEB_OIDC_ISSUER` | *(empty)* | OIDC issuer URL written to `/oidc-config.json`. Empty disables the Login button. |
-| `DOCROOT_WEB_OIDC_CLIENT_ID` | *(empty)* | Public client ID for the browser authorization-code + PKCE flow. |
+| `DOCROOT_WEB_OIDC_ISSUER` | *(empty)* | OIDC issuer URL. Empty disables the Login button. |
+| `DOCROOT_WEB_OIDC_CLIENT_ID` | *(empty)* | Public client ID for the browser login flow. |
 
 ---
 
@@ -108,12 +108,12 @@ network namespace, so `localhost` resolves to the API container:
 ```yaml
 containers:
   - name: accelerator
-    image: ghcr.io/exhuma/docroot/nginx:latest
+    image: ghcr.io/exhuma/docroot/nginx:1.0.0
     env:
       - name: API_HOST
         value: localhost
   - name: api
-    image: ghcr.io/exhuma/docroot/backend:latest
+    image: ghcr.io/exhuma/docroot/backend:1.0.0
 ```
 
 **Multi-pod deployment (separate Deployments + Service):** Set
@@ -129,20 +129,17 @@ env:
 
 ## OIDC Authentication
 
-Docroot uses a **three-layer** authentication architecture:
+Docroot uses a **two-client** authentication architecture:
 
-- **UI (public client)** — the single-page application performs an
-  [Authorization Code + PKCE](https://oauth.net/2/pkce/) flow via
-  `oidc-client-ts`.  No client secret is used.
-- **API (resource server)** — the FastAPI backend validates Bearer
-  tokens by verifying their signature against the JWKS endpoint.
+- **UI (public client)** — the browser performs an
+  [Authorization Code + PKCE](https://oauth.net/2/pkce/) flow.
+  No client secret is used.
+- **API (resource server)** — the backend validates Bearer tokens
+  by verifying their signature against the JWKS endpoint.
   It does not redirect users; it only accepts or rejects tokens.
-- **Session cookie (docs bridge)** — after login the UI exchanges
-  the access token for an `HttpOnly` session cookie via
-  `POST /api/auth/session`.  nginx uses this cookie with
-  `auth_request` to gate access to served documentation.  It is
-  **not** a server-side session; the cookie carries no state —
-  the backend re-validates the token on every `auth_request` call.
+- **Session cookie (docs bridge)** — after login the UI obtains
+  an `HttpOnly` session cookie that gates access to served
+  documentation.  No server-side session state is stored.
 
 Configure both clients for every IDP:
 
@@ -189,6 +186,8 @@ In the Keycloak admin console, create a realm (e.g. `docroot`).
 1. **Clients → Create client**; Client ID: `docroot-api`
 2. Client authentication: **ON**; Service accounts: **ON**
 
+These steps give you the values for the API container:
+
 ```shell
 DOCROOT_API_OAUTH_JWKS_URL=https://keycloak.example.com/realms/docroot/protocol/openid-connect/certs
 DOCROOT_API_OAUTH_AUDIENCE=docroot-api
@@ -203,6 +202,8 @@ DOCROOT_API_OAUTH_AUDIENCE=docroot-api
    - `https://docroot.example.com/oidc-silent`
 4. Web origins: `https://docroot.example.com`
 
+These steps give you the values for the nginx container:
+
 ```shell
 DOCROOT_WEB_OIDC_ISSUER=https://keycloak.example.com/realms/docroot
 DOCROOT_WEB_OIDC_CLIENT_ID=docroot-ui
@@ -213,16 +214,12 @@ DOCROOT_WEB_OIDC_CLIENT_ID=docroot-ui
 Create realm roles (e.g. `docroot-editor`) under
 **Realm roles → Create role** and assign them to users via
 **Users → Role mappings**.  Reference the exact role name in
-`namespace.toml` ACL entries.
+namespace ACL entries.
 
-The Keycloak role extractor reads `realm_access.roles` and
-`resource_access.<client_id>.roles` from the token.
-
-Realm roles are returned as-is (e.g. `docroot-editor`).
+Realm roles appear as-is (e.g. `docroot-editor`).
 Client-scoped roles are prefixed with the client ID and a slash
-(e.g. `docroot-api/editor`).  Use the prefixed form in
-`namespace.toml` ACL entries when you want to grant access based
-on a client-specific role.
+(e.g. `docroot-api/editor`).  Use the prefixed form in namespace
+ACL entries when granting access based on a client-specific role.
 
 To limit which clients contribute roles, set one or both of:
 
@@ -318,40 +315,31 @@ Docroot at the proxy.
 
 ## Namespace ACL
 
-Each namespace stores a `namespace.toml` file:
-
-```toml
-creator = "alice"
-versioning = "semver"
-
-[access]
-public_read = false
-browsable = true
-
-[[access.roles]]
-role = "docroot-editor"
-read = true
-write = true
-
-[[access.roles]]
-role = "docroot-reader"
-read = true
-write = false
-```
+Each namespace has an access control list that you can manage
+via the **Manage Access** button (shield icon) in the UI, or
+through the ACL API described below.
 
 | Field | Description |
 |---|---|
 | `creator` | `sub` claim of the creator. Only this user may delete the namespace. |
+| `creator_display_name` | Informational display name for the creator. Set automatically on login; may lag behind the IDP. |
+| `display_name` | Human-readable label for the namespace shown in the UI. |
 | `versioning` | Sort scheme: `semver`, `calver`, `pep440`, or a custom regex. |
-| `access.public_read` | Allow unauthenticated read access to docs. |
-| `access.browsable` | Allow unauthenticated callers to list the namespace and its projects/versions without granting doc access (default `true`). |
-| `access.roles[].role` | Role name from the JWT. Matching is **case-insensitive**. |
-| `access.roles[].read` / `.write` | Grant read / write access. |
+| `public_read` | Allow unauthenticated read access to docs. |
+| `browsable` | Allow unauthenticated callers to list the namespace and its projects/versions without granting doc access (default `true`). |
+| Role `read` / `write` | Grant read or write access to users holding that role from the JWT. Matching is **case-insensitive**. |
 
-The `namespace.toml` file can be edited directly on the host
-or managed via the API (see below).  Direct edits are picked
-up automatically; the ACL cache invalidates on file-mtime
-change without requiring a restart.
+:::{note}
+ACL settings are persisted in a `namespace.toml` file inside
+each namespace directory on the host.  You can inspect or edit
+this file directly — changes are picked up automatically
+without a restart.  The file format is shown below for
+reference; see the *Data Layout* section for the storage path.
+
+```{literalinclude} ../../apps/backend/tests/fixtures/namespace.toml
+:language: toml
+```
+:::
 
 ### ACL API
 

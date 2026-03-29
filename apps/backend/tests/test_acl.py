@@ -1,10 +1,13 @@
 """Tests for the AclCache class, focusing on creator-based access."""
 
+import shutil
 from pathlib import Path
 
 import pytest
 
 from app.acl import AclCache
+
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 @pytest.fixture
@@ -173,3 +176,30 @@ def test_can_browse_true_when_can_read(acl: AclCache, tmp_path: Path) -> None:
     )
     acl_data = acl.get(ns_dir)
     assert acl.can_browse(acl_data, [], subject="owner@example.com")
+
+
+def test_documented_example_fixture_is_valid(acl: AclCache, tmp_path: Path) -> None:
+    """Ensure the documented namespace.toml example is parseable and correct.
+
+    This test guards against the example fixture drifting out of sync
+    with the implementation.
+    """
+    ns_dir = tmp_path / "example"
+    ns_dir.mkdir()
+    shutil.copy(FIXTURES / "namespace.toml", ns_dir / "namespace.toml")
+    acl_data = acl.get(ns_dir)
+
+    # Creator always has full access.
+    assert acl.can_read(acl_data, [], subject="alice@example.com")
+    assert acl.can_write(acl_data, [], subject="alice@example.com")
+
+    # Role-based editor access.
+    assert acl.can_read(acl_data, ["docroot-editor"], subject="bob@example.com")
+    assert acl.can_write(acl_data, ["docroot-editor"], subject="bob@example.com")
+
+    # Role-based reader access: read yes, write no.
+    assert acl.can_read(acl_data, ["docroot-reader"], subject="carol@example.com")
+    assert not acl.can_write(acl_data, ["docroot-reader"], subject="carol@example.com")
+
+    # Namespace is browsable without authentication.
+    assert acl.can_browse(acl_data, [], subject="")
