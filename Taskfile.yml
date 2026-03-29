@@ -163,6 +163,58 @@ tasks:
       - task: build:frontend
       - task: test:backend
 
+  # ----------------------------------------------------------------
+  # Release
+  # ----------------------------------------------------------------
+
+  release:bump:
+    desc: >
+      Bump version in pyproject.toml and package.json without
+      committing. Usage: task release:bump VERSION=1.2.3
+    preconditions:
+      - sh: '[[ -n "{{.VERSION}}" ]]'
+        msg: "VERSION is required. Usage: task release:bump VERSION=1.2.3"
+      - sh: >
+          echo "{{.VERSION}}" |
+          grep -Eq "^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$"
+        msg: "VERSION must be semver (e.g. 1.2.3 or 1.2.3-rc.1)"
+    cmds:
+      - sed -i
+          's/^version = ".*"/version = "{{.VERSION}}"/'
+          apps/backend/pyproject.toml
+      - npm pkg set version={{.VERSION}} --prefix apps/frontend
+      - echo "Bumped version to {{.VERSION}} in pyproject.toml and
+          package.json."
+
+  release:
+    desc: >
+      Cut a release: bump versions, commit, tag, and push.
+      Requires a clean working tree on main.
+      Usage: task release VERSION=1.2.3
+    preconditions:
+      - sh: '[[ -n "{{.VERSION}}" ]]'
+        msg: "VERSION is required. Usage: task release VERSION=1.2.3"
+      - sh: >
+          echo "{{.VERSION}}" |
+          grep -Eq "^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$"
+        msg: "VERSION must be semver (e.g. 1.2.3 or 1.2.3-rc.1)"
+      - sh: '[[ "$(git branch --show-current)" == "main" ]]'
+        msg: "Releases must be cut from the main branch"
+      - sh: 'git diff --quiet && git diff --cached --quiet'
+        msg: "Working tree must be clean before releasing"
+    cmds:
+      - task: release:bump
+        vars:
+          VERSION: '{{.VERSION}}'
+      - git add apps/backend/pyproject.toml apps/frontend/package.json
+      - "git commit -m \"chore: release {{.VERSION}}\""
+      - git tag v{{.VERSION}}
+      - git push origin main
+      - git push origin v{{.VERSION}}
+      - echo ""
+      - echo "v{{.VERSION}} released. GitHub Actions will build and
+          push the Docker images."
+
   stack-up:
     desc: Bring a prod-similar stack up for local testing
     env:
