@@ -163,15 +163,15 @@ async def upload_version(
     :param storage: Storage instance (injected).
     :param acl: ACL cache instance (injected).
     :returns: ``{"status": "created"}``.
-    :raises 404: If the namespace or project does not exist.
+    :raises 404: If the namespace does not exist.
     :raises 422: If the ZIP fails validation.
     :raises 409: If the version+locale already exists.
     """
     if not storage.namespace_exists(namespace):
         raise HTTPException(status_code=404, detail="Namespace not found")
-    if not storage.project_exists(namespace, project):
-        raise HTTPException(status_code=404, detail="Project not found")
     require_write(namespace, storage, acl, auth)
+    if not storage.project_exists(namespace, project):
+        storage.create_project(namespace, project)
 
     subject = uploader_subject or (auth.subject if auth else "")
     await install_upload(
