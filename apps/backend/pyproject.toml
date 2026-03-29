@@ -16,6 +16,7 @@ dependencies = [
     "packaging>=24",
     "httpx>=0.27",
     "gouge>=2.2",
+    "tomlkit>=0.13",
 ]
 
 [project.optional-dependencies]

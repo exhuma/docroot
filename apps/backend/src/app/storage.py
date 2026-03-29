@@ -17,6 +17,8 @@ import tomllib
 import uuid
 from pathlib import Path
 
+import tomlkit
+
 from app.logging import get_logger
 
 _log = get_logger(__name__)
@@ -51,16 +53,10 @@ def _write_toml_simple(
     :param path: Destination path.
     :param data: Flat key-value pairs to serialise.
     """
-    lines: list[str] = []
+    doc = tomlkit.document()
     for key, value in data.items():
-        if isinstance(value, bool):
-            lines.append(f"{key} = {str(value).lower()}")
-        elif isinstance(value, str):
-            escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-            lines.append(f'{key} = "{escaped}"')
-        elif isinstance(value, (int, float)):
-            lines.append(f"{key} = {value}")
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        doc.add(key, value)
+    path.write_text(tomlkit.dumps(doc), encoding="utf-8")
 
 
 def _write_namespace_toml(
@@ -87,39 +83,28 @@ def _write_namespace_toml(
         with the IDP; IDP values always take precedence.
     :param display_name: Human-readable namespace display name.
     """
-    lines: list[str] = []
-    escaped_creator = creator.replace("\\", "\\\\").replace('"', '\\"')
-    lines.append(f'creator = "{escaped_creator}"')
+    doc = tomlkit.document()
+    doc.add("creator", creator)
     if creator_display_name:
-        escaped_dn = creator_display_name.replace(
-            "\\", "\\\\"
-        ).replace('"', '\\"')
-        lines.append(f'creator_display_name = "{escaped_dn}"')
+        doc.add("creator_display_name", creator_display_name)
     if display_name:
-        escaped_disp = display_name.replace("\\", "\\\\").replace(
-            '"', '\\"'
-        )
-        lines.append(f'display_name = "{escaped_disp}"')
+        doc.add("display_name", display_name)
     if versioning:
-        escaped_v = versioning.replace("\\", "\\\\").replace('"', '\\"')
-        lines.append(f'versioning = "{escaped_v}"')
-    lines.append("")
-    lines.append("[access]")
-    lines.append(f"public_read = {str(public_read).lower()}")
-    lines.append(f"browsable = {str(browsable).lower()}")
-    for role_entry in roles:
-        lines.append("")
-        lines.append("[[access.roles]]")
-        role_name = str(role_entry.get("role", ""))
-        escaped_role = role_name.replace("\\", "\\\\").replace('"', '\\"')
-        lines.append(f'role = "{escaped_role}"')
-        lines.append(
-            f"read = {str(bool(role_entry.get('read', False))).lower()}"
-        )
-        lines.append(
-            f"write = {str(bool(role_entry.get('write', False))).lower()}"
-        )
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        doc.add("versioning", versioning)
+    access = tomlkit.table()
+    access.add("public_read", public_read)
+    access.add("browsable", browsable)
+    if roles:
+        roles_aot = tomlkit.aot()
+        for role_entry in roles:
+            t = tomlkit.table()
+            t.add("role", str(role_entry.get("role", "")))
+            t.add("read", bool(role_entry.get("read", False)))
+            t.add("write", bool(role_entry.get("write", False)))
+            roles_aot.append(t)
+        access.add("roles", roles_aot)
+    doc.add("access", access)
+    path.write_text(tomlkit.dumps(doc), encoding="utf-8")
 
 
 def _write_project_toml(path: Path, display_name: str) -> None:
@@ -128,8 +113,9 @@ def _write_project_toml(path: Path, display_name: str) -> None:
     :param path: Destination path.
     :param display_name: Human-readable project display name.
     """
-    escaped = display_name.replace("\\", "\\\\").replace('"', '\\"')
-    path.write_text(f'display_name = "{escaped}"\n', encoding="utf-8")
+    doc = tomlkit.document()
+    doc.add("display_name", display_name)
+    path.write_text(tomlkit.dumps(doc), encoding="utf-8")
 
 
 class FilesystemStorage:
@@ -269,12 +255,10 @@ class FilesystemStorage:
         try:
             with open(toml_path, "rb") as fh:
                 return tomllib.load(fh)
-        except (tomllib.TOMLDecodeError, OSError):
+        except tomllib.TOMLDecodeError, OSError:
             return {}
 
-    def get_project_meta(
-        self, namespace: str, project: str
-    ) -> dict[str, object]:
+    def get_project_meta(self, namespace: str, project: str) -> dict[str, object]:
         """Return the raw parsed project.toml for a project.
 
         :param namespace: Namespace slug.
@@ -282,15 +266,13 @@ class FilesystemStorage:
         :returns: Parsed TOML data as a dict, or empty dict if
             the file does not exist or cannot be parsed.
         """
-        toml_path = (
-            self._project_dir(namespace, project) / "project.toml"
-        )
+        toml_path = self._project_dir(namespace, project) / "project.toml"
         if not toml_path.exists():
             return {}
         try:
             with open(toml_path, "rb") as fh:
                 return tomllib.load(fh)
-        except (tomllib.TOMLDecodeError, OSError):
+        except tomllib.TOMLDecodeError, OSError:
             return {}
 
     # ------------------------------------------------------------------
