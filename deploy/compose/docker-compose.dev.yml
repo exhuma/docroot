@@ -43,14 +43,17 @@ services:
 
   api:
     environment:
-      DOCROOT_OAUTH_JWKS_URL: >-
+      DOCROOT_API_OAUTH_JWKS_URL: >-
         http://keycloak.127.0.0.1.nip.io:8080/realms/docroot/protocol/openid-connect/certs
-      DOCROOT_OAUTH_AUDIENCE: docroot-api
-      DOCROOT_OIDC_ISSUER: >-
-        http://keycloak.127.0.0.1.nip.io:8080/realms/docroot
-      DOCROOT_OIDC_CLIENT_ID: docroot-ui
+      DOCROOT_API_OAUTH_AUDIENCE: docroot-api
     extra_hosts:
       - "keycloak.127.0.0.1.nip.io:host-gateway"
     depends_on:
       keycloak:
         condition: service_healthy
+
+  nginx:
+    environment:
+      DOCROOT_WEB_OIDC_ISSUER: >-
+        http://keycloak.127.0.0.1.nip.io:8080/realms/docroot
+      DOCROOT_WEB_OIDC_CLIENT_ID: docroot-ui

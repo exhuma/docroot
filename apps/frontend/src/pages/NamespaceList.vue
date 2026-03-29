@@ -7,11 +7,11 @@
       v-model="uiLocale"
       class="mr-2"
       density="compact"
-      variant="outlined"
       hide-details
       :items="uiLocales"
       :label="t('language')"
       style="max-width: 120px"
+      variant="outlined"
     />
     <AuthBar />
     <v-progress-linear v-if="loading" absolute color="primary" indeterminate location="bottom" />

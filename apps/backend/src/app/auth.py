@@ -64,7 +64,7 @@ def _get_jwks_client(
         return _FileJWKSClient(Path(jwks_url[len("file://") :]))
     if not verify_ssl:
         _log.warning(
-            "DOCROOT_OAUTH_VERIFY_SSL=false — TLS certificate "
+            "DOCROOT_API_OAUTH_VERIFY_SSL=false — TLS certificate "
             "verification is DISABLED for JWKS endpoint %s. "
             "Do not use in production.",
             jwks_url,

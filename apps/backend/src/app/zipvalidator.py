@@ -18,9 +18,9 @@ def validate_zip(zip_path: Path) -> None:
 
     Checks enforced:
 
-    - File count does not exceed ``DOCROOT_ZIP_MAX_FILES``
+    - File count does not exceed ``DOCROOT_API_ZIP_MAX_FILES``
     - Total extracted size does not exceed
-      ``DOCROOT_ZIP_MAX_EXTRACTED_MB`` MB
+      ``DOCROOT_API_ZIP_MAX_EXTRACTED_MB`` MB
     - No path-traversal (``..``) entries
     - No absolute-path entries
     - No symlink entries
