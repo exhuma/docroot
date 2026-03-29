@@ -22,6 +22,30 @@
       "directAccessGrantsEnabled": false
     },
     {
+      "clientId": "docroot-cli",
+      "name": "Docroot CLI",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "docroot-cli-dev-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocolMappers": [
+        {
+          "name": "docroot-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.custom.audience": "docroot-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
       "clientId": "docroot-ui",
       "name": "Docroot UI",
       "enabled": true,
@@ -56,6 +80,8 @@
       "username": "alice",
       "enabled": true,
       "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Example",
       "email": "alice@example.com",
       "credentials": [
         {
@@ -71,6 +97,8 @@
       "username": "bob",
       "enabled": true,
       "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Example",
       "email": "bob@example.com",
       "credentials": [
         {
