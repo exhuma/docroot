@@ -435,6 +435,9 @@ class FilesystemStorage:
         result: list[MountGroupInfo] = []
         for dev, ns_names in by_device.items():
             raw = f"{salt}:{dev}".encode()
+            # 16 hex chars = 64 bits. Adequate for grouping a small
+            # number of mount points within one response; not intended
+            # for persistence or cross-request comparison.
             mount_group = hashlib.sha256(raw).hexdigest()[:16]
             first_dir = self._namespace_dir(ns_names[0])
             try:
