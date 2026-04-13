@@ -73,7 +73,7 @@ remain:
 - Version lists are not yet sorted by semantic or calendar
   versioning rules.
 - There is no visual indicator when you are reading an older
-  version rather than `latest`.
+  version rather than a specific ref or version.
 
 Some of these will be addressed as they become a priority for
 our team.  Others may never be implemented if they turn out

@@ -8,13 +8,12 @@ class VersionOut(BaseModel):
 
     :param name: Version string.
     :param locales: Available locale codes for this version.
-    :param is_latest: Whether this version is pointed to by
-        latest.
+    :param refs: Ref names pointing to this version.
     """
 
     name: str
     locales: list[str] = Field(default_factory=list)
-    is_latest: bool = False
+    refs: list[str] = Field(default_factory=list)
 
 
 class ResolveOut(BaseModel):

@@ -34,7 +34,12 @@ export interface Project {
 export interface VersionInfo {
   name: string
   locales: string[]
-  is_latest: boolean
+  refs: string[]
+}
+
+export interface RefInfo {
+  name: string
+  version: string
 }
 
 export interface ResolveResult {
@@ -183,14 +188,38 @@ export const api = {
     await handleResponse(res)
   },
 
-  async setLatest(ns: string, proj: string, version: string, token: string): Promise<void> {
-    const res = await fetch(
-      `${projBase(ns, proj)}/versions/` + `${encodeURIComponent(version)}/latest`,
-      {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
+  /** List all refs for a project. */
+  async listRefs(ns: string, proj: string, token?: string | null): Promise<RefInfo[]> {
+    const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+    const res = await fetch(`${projBase(ns, proj)}/refs`, { headers })
+    return handleResponse(res) as Promise<RefInfo[]>
+  },
+
+  /** Create or update a named ref to point to a version. */
+  async setRef(
+    ns: string,
+    proj: string,
+    refName: string,
+    version: string,
+    token: string,
+  ): Promise<RefInfo> {
+    const res = await fetch(`${projBase(ns, proj)}/refs/${encodeURIComponent(refName)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
-    )
+      body: JSON.stringify({ version }),
+    })
+    return handleResponse(res) as Promise<RefInfo>
+  },
+
+  /** Delete a named ref. */
+  async deleteRef(ns: string, proj: string, refName: string, token: string): Promise<void> {
+    const res = await fetch(`${projBase(ns, proj)}/refs/${encodeURIComponent(refName)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
     await handleResponse(res)
   },
 

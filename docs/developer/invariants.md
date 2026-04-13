@@ -25,7 +25,7 @@ These rules are mandatory and derive from `contract.md`.
 - Version+locale artifacts are immutable once created.
 - Writes must be atomic; no partial version visibility.
 - `metadata.toml` is system-generated and not trusted from uploaded archives.
-- `latest` is a symlink alias and must be updated atomically.
+- Refs in `refs/` are symlinks and must be written atomically.
 
 ## Locale Invariants
 

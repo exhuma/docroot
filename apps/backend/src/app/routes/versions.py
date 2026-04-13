@@ -79,7 +79,11 @@ async def list_versions(
         versioning = str(ns_meta.get("versioning", ""))
     if versioning:
         versions = reversed(sort_versions(versions, versioning))
-    current_latest = storage.get_latest(namespace, project)
+    refs_map = storage.list_refs(namespace, project)
+    # Invert: {ref_name: version} -> {version: [ref_names]}
+    version_refs: dict[str, list[str]] = {}
+    for ref_name, ver in refs_map.items():
+        version_refs.setdefault(ver, []).append(ref_name)
     result: list[VersionOut] = []
     for v in versions:
         locales = storage.list_locales(namespace, project, v)
@@ -87,7 +91,7 @@ async def list_versions(
             VersionOut(
                 name=v,
                 locales=locales,
-                is_latest=(v == current_latest),
+                refs=sorted(version_refs.get(v, [])),
             )
         )
     return result
@@ -136,7 +140,7 @@ async def upload_version(
     file: Annotated[UploadFile, File(...)],
     version: Annotated[str, Form(...)],
     locale: Annotated[str, Form(...)],
-    latest: Annotated[bool, Form()] = False,
+    ref: Annotated[str | None, Form()] = None,
     uploader_subject: Annotated[str | None, Form()] = None,
     upload_timestamp: Annotated[str | None, Form()] = None,
     versioning: Annotated[str | None, Form()] = None,
@@ -168,7 +172,8 @@ async def upload_version(
     :param file: ZIP archive (multipart field ``file``).
     :param version: Target version string (form field).
     :param locale: Two-letter locale code (form field).
-    :param latest: Set as latest after upload (form field).
+    :param ref: Optional ref name to assign after upload
+        (form field, e.g. ``"latest"``).
     :param uploader_subject: Override uploader identity.
     :param upload_timestamp: ISO 8601 timestamp (form field).
     :param versioning: Versioning scheme for the project
@@ -222,7 +227,7 @@ async def upload_version(
         project=project,
         version=version,
         locale=locale,
-        latest=latest,
+        ref=ref,
         uploader_subject=subject,
         upload_timestamp=upload_timestamp,
         storage=storage,
@@ -272,46 +277,6 @@ async def delete_version(
             status_code=404,
             detail="Version+locale not found",
         )
-
-
-@router.put(
-    "/api/namespaces/{namespace}/projects/{project}/versions/{version}/latest",
-    status_code=204,
-)
-async def set_latest(
-    namespace: str,
-    project: str,
-    version: str,
-    auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
-    storage: FilesystemStorage = Depends(get_storage),
-    acl: AclCache = Depends(get_acl),
-) -> None:
-    """Mark a version as the latest.
-
-    Atomically updates the ``latest`` symlink for the project.
-
-    Requires write access to the namespace.
-
-    ---
-
-    :param namespace: Namespace name.
-    :param project: Project name.
-    :param version: Version string to mark as latest.
-    :param auth: Optional authenticated principal (injected).
-    :param storage: Storage instance (injected).
-    :param acl: ACL cache instance (injected).
-    :raises 404: If the namespace, project, or version is not
-        found.
-    """
-    if not storage.namespace_exists(namespace):
-        raise HTTPException(status_code=404, detail="Namespace not found")
-    if not storage.project_exists(namespace, project):
-        raise HTTPException(status_code=404, detail="Project not found")
-    require_write(namespace, storage, acl, auth)
-    versions = storage.list_versions(namespace, project)
-    if version not in versions:
-        raise HTTPException(status_code=404, detail="Version not found")
-    storage.set_latest(namespace, project, version)
 
 
 @router.get(

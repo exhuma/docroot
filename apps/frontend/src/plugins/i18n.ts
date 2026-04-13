@@ -15,6 +15,16 @@ const messages = {
     actions: 'Actions',
     latest: 'latest',
     setLatest: 'Set as latest',
+    manageRefs: 'Manage refs',
+    manageRefsTitle: 'Refs for {version}',
+    assignedRefs: 'Currently assigned',
+    assignRef: 'Assign ref to this version',
+    existingRef: 'Existing ref',
+    noOtherRefs: 'No other refs exist',
+    orCreateNew: '— or create a new ref —',
+    newRefName: 'New ref name',
+    assign: 'Assign',
+    refLabel: 'Ref / tag (e.g. latest)',
     noNamespaces: 'No namespaces found.',
     noProjects: 'No projects found.',
     noVersions: 'No versions found.',
@@ -69,6 +79,9 @@ const messages = {
     manualUploadText:
       'Navigate to a project, then click Upload (visible' +
       ' only when authenticated with write access).' +
+      ' To attach a named tag (ref) to the version, enter' +
+      ' a name (e.g. latest) in the Ref / tag field and' +
+      ' leave it blank to upload without a ref.' +
       ' The uploaded ZIP must satisfy these constraints:',
     manualUploadRule1: 'Contains index.html at the archive root',
     manualUploadRule2: 'No path-traversal (..) entries',
@@ -208,6 +221,16 @@ const messages = {
     actions: 'Actions',
     latest: 'dernière',
     setLatest: 'Définir comme dernière',
+    manageRefs: 'Gérer les refs',
+    manageRefsTitle: 'Refs pour {version}',
+    assignedRefs: 'Actuellement assignés',
+    assignRef: 'Assigner un ref à cette version',
+    existingRef: 'Ref existant',
+    noOtherRefs: 'Aucun autre ref',
+    orCreateNew: '— ou créer un nouveau ref —',
+    newRefName: 'Nouveau nom de ref',
+    assign: 'Assigner',
+    refLabel: 'Ref / tag (ex. latest)',
     noNamespaces: 'Aucun espace de noms trouvé.',
     noProjects: 'Aucun projet trouvé.',
     noVersions: 'Aucune version trouvée.',
@@ -257,7 +280,10 @@ const messages = {
       ' jeton Bearer dans le champ de texte.',
     manualUpload: 'Téléverser de la documentation',
     manualUploadText:
-      'Naviguez vers un projet, puis cliquez sur' + " Téléverser. L'archive ZIP doit respecter:",
+      'Naviguez vers un projet, puis cliquez sur' +
+      ' Téléverser. Pour associer un tag (ref) à la' +
+      ' version, saisissez un nom (ex. latest) dans' +
+      " le champ Ref / tag. L'archive ZIP doit respecter:",
     manualUploadRule1: "Contient index.html à la racine de l'archive",
     manualUploadRule2: "Pas d'entrées de traversal (..)",
     manualUploadRule3: 'Pas de liens symboliques',
@@ -453,7 +479,9 @@ const messages = {
     manualUpload: 'Dokumentation hochladen',
     manualUploadText:
       'Navigieren Sie zu einem Projekt und klicken Sie' +
-      ' auf Hochladen. Das ZIP-Archiv muss erfüllen:',
+      ' auf Hochladen. Geben Sie optional einen Ref-Namen' +
+      ' (z. B. latest) im Feld Ref / Tag ein.' +
+      ' Das ZIP-Archiv muss erfüllen:',
     manualUploadRule1: 'Enthält index.html im Archivstamm',
     manualUploadRule2: 'Keine Pfad-Traversal-Einträge (..)',
     manualUploadRule3: 'Keine symbolischen Links',

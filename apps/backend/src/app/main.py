@@ -20,6 +20,7 @@ from app.routes.health import router as health_router
 from app.routes.me import router as me_router
 from app.routes.namespaces import router as namespaces_router
 from app.routes.projects import router as projects_router
+from app.routes.refs import router as refs_router
 from app.routes.session import router as session_router
 from app.routes.versions import router as versions_router
 from app.settings import Settings, get_settings
@@ -123,6 +124,7 @@ def create_app(
     application.include_router(namespaces_router)
     application.include_router(projects_router)
     application.include_router(versions_router)
+    application.include_router(refs_router)
     application.include_router(disk_usage_router)
 
     return application

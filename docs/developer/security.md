@@ -75,11 +75,11 @@ the header path.
 - `/data` is the authoritative data store.
 - Never allow overwriting existing version+locale artifacts.
 - Perform all writes through storage abstraction.
-- Ensure atomic creation and `latest` symlink updates.
+- Ensure atomic creation and ref symlink updates.
 
 ## Resolution and Fallback Safety
 
-- Use resolver for every version lookup, including `latest`.
+- Use resolver for every version lookup, including ref aliases.
 - Locale fallback order is fixed and deterministic:
   requested locale, then `en`, then any existing locale, then `404`.
 - If fallback occurs, UI should show a gentle notice.
@@ -110,6 +110,6 @@ the header path.
 - ACL write check is present for all mutating endpoints.
 - ZIP validation includes traversal and symlink rejection.
 - Filesystem writes are atomic and immutable.
-- Resolver is used for `latest` and locale handling everywhere.
+- Resolver is used for ref aliases and locale handling everywhere.
 - Static documentation routes are guarded by nginx
   `auth_request` delegating to `GET /api/auth`.
