@@ -110,10 +110,19 @@ async def create_project(
             ),
         )
     try:
-        storage.create_project(namespace, slug, display_name=body.name, versioning=body.versioning)
+        storage.create_project(
+            namespace,
+            slug,
+            display_name=body.name,
+            versioning=body.versioning,
+        )
     except NamespaceNotFound:
         raise HTTPException(status_code=404, detail="Namespace not found")
-    return ProjectOut(name=slug, display_name=body.name, versioning=body.versioning)
+    return ProjectOut(
+        name=slug,
+        display_name=body.name,
+        versioning=body.versioning,
+    )
 
 
 @router.delete(
