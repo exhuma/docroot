@@ -13,6 +13,7 @@ export interface Namespace {
 export interface Project {
   name: string
   display_name: string
+  versioning: string
 }
 
 export interface VersionInfo {
@@ -115,14 +116,19 @@ export const api = {
     return handleResponse(res) as Promise<Project[]>
   },
 
-  async createProject(ns: string, name: string, token: string): Promise<void> {
+  async createProject(
+    ns: string,
+    name: string,
+    token: string,
+    versioning = '',
+  ): Promise<void> {
     const res = await fetch(`${nsBase(ns)}/projects`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, versioning }),
     })
     await handleResponse(res)
   },
