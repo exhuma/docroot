@@ -18,6 +18,7 @@
 
     <v-data-table
       :headers="headers"
+      hover
       item-value="name"
       :items="versions"
       :items-per-page="-1"
@@ -31,39 +32,28 @@
       </template>
 
       <template #item.locales="{ item }">
-        <v-chip v-for="loc in item.locales" :key="loc" class="mr-1" label size="small">
+        <v-chip
+          v-for="loc in item.locales"
+          :key="loc"
+          class="mr-1"
+          label
+          size="small"
+          :to="`/${namespace}/${project}/docs/${item.name}/${loc}`"
+        >
           {{ loc }}
         </v-chip>
       </template>
 
       <template #item.actions="{ item }">
-        <div class="d-flex align-center ga-2">
-          <v-select
-            v-model="selectedLocale[item.name]"
-            density="compact"
-            hide-details
-            :items="item.locales"
-            :label="t('selectLocale')"
-            style="width: 120px"
-            variant="solo"
-          />
-          <v-btn
-            color="primary"
-            density="compact"
-            :disabled="!selectedLocale[item.name]"
-            size="small"
-            @click="viewDocs(item.name)"
-          >
-            {{ t('viewDocs') }}
-          </v-btn>
-          <v-btn
-            v-if="isAuthenticated() && !item.is_latest"
-            density="compact"
-            size="small"
-            @click="onSetLatest(item.name)"
-          >
-            {{ t('setLatest') }}
-          </v-btn>
+        <div class="d-flex justify-end">
+          <v-menu v-if="isAuthenticated() && !item.is_latest">
+            <template #activator="{ props }">
+              <v-btn density="compact" icon="mdi-dots-vertical" size="small" v-bind="props" />
+            </template>
+            <v-list>
+              <v-list-item :title="t('setLatest')" @click="onSetLatest(item.name)" />
+            </v-list>
+          </v-menu>
         </div>
       </template>
 
@@ -82,9 +72,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { api, type VersionInfo } from '@/api'
 import { isAuthenticated, token } from '@/auth'
 import AuthBar from '@/components/AuthBar.vue'
@@ -92,7 +82,6 @@ import UploadDialog from '@/components/UploadDialog.vue'
 
 const { t } = useI18n()
 const route = useRoute()
-const router = useRouter()
 const namespace = route.params.namespace as string
 const project = route.params.project as string
 
@@ -100,12 +89,11 @@ const versions = ref<VersionInfo[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const uploadDialog = ref(false)
-const selectedLocale = reactive<Record<string, string>>({})
 
 const headers = computed(() => [
-  { title: t('version'), key: 'name', sortable: false },
+  { title: t('version'), key: 'name', sortable: false, width: '180px' },
   { title: t('locales'), key: 'locales', sortable: false },
-  { title: t('actions'), key: 'actions', sortable: false },
+  { title: t('actions'), key: 'actions', sortable: false, width: '48px' },
 ])
 
 async function load() {
@@ -113,22 +101,11 @@ async function load() {
   error.value = null
   try {
     versions.value = await api.listVersions(namespace, project, token.value)
-    for (const v of versions.value) {
-      if (v.locales.length > 0 && !selectedLocale[v.name]) {
-        selectedLocale[v.name] = v.locales[0] ?? ''
-      }
-    }
   } catch (error_) {
     error.value = (error_ as Error).message
   } finally {
     loading.value = false
   }
-}
-
-function viewDocs(version: string) {
-  const loc = selectedLocale[version]
-  if (!loc) return
-  router.push(`/${namespace}/${project}/docs/${version}/${loc}`)
 }
 
 async function onSetLatest(version: string) {
