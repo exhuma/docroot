@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.logging import get_logger, setup_logging
 from app.routes.auth import router as auth_router
+from app.routes.disk_usage import router as disk_usage_router
 from app.routes.health import router as health_router
 from app.routes.me import router as me_router
 from app.routes.namespaces import router as namespaces_router
@@ -122,6 +123,7 @@ def create_app(
     application.include_router(namespaces_router)
     application.include_router(projects_router)
     application.include_router(versions_router)
+    application.include_router(disk_usage_router)
 
     return application
 

@@ -69,9 +69,7 @@ async def list_namespaces(
             )
             versioning = str(meta.get("versioning", ""))
             creator = str(meta.get("creator", ""))
-            creator_display_name = str(
-                meta.get("creator_display_name", "")
-            )
+            creator_display_name = str(meta.get("creator_display_name", ""))
             display_name = str(meta.get("display_name", ""))
             result.append(
                 NamespaceOut(

@@ -448,12 +448,8 @@ def test_create_project_writes_project_toml(
     import tomllib
 
     storage.create_namespace("ns-proj-toml")
-    storage.create_project(
-        "ns-proj-toml", "my-proj", display_name="My Project"
-    )
-    proj_dir = (
-        storage.namespace_dir("ns-proj-toml") / "projects" / "my-proj"
-    )
+    storage.create_project("ns-proj-toml", "my-proj", display_name="My Project")
+    proj_dir = storage.namespace_dir("ns-proj-toml") / "projects" / "my-proj"
     with open(proj_dir / "project.toml", "rb") as fh:
         data = tomllib.load(fh)
     assert data.get("display_name") == "My Project"
@@ -467,11 +463,7 @@ def test_create_project_no_display_name_uses_slug(
 
     storage.create_namespace("ns-slug-default")
     storage.create_project("ns-slug-default", "my-slug")
-    proj_dir = (
-        storage.namespace_dir("ns-slug-default")
-        / "projects"
-        / "my-slug"
-    )
+    proj_dir = storage.namespace_dir("ns-slug-default") / "projects" / "my-slug"
     with open(proj_dir / "project.toml", "rb") as fh:
         data = tomllib.load(fh)
     assert data.get("display_name") == "my-slug"
@@ -482,9 +474,7 @@ def test_get_project_meta_returns_display_name(
 ) -> None:
     """Ensure get_project_meta returns the display_name field."""
     storage.create_namespace("ns-pmeta")
-    storage.create_project(
-        "ns-pmeta", "p-meta", display_name="Project Meta"
-    )
+    storage.create_project("ns-pmeta", "p-meta", display_name="Project Meta")
     meta = storage.get_project_meta("ns-pmeta", "p-meta")
     assert meta.get("display_name") == "Project Meta"
 
@@ -495,11 +485,86 @@ def test_get_project_meta_missing_toml_returns_empty(
     """Ensure get_project_meta returns empty dict for missing toml."""
     storage.create_namespace("ns-pmeta-missing")
     # Manually create directory without project.toml
-    proj_dir = (
-        storage.namespace_dir("ns-pmeta-missing")
-        / "projects"
-        / "bare-proj"
-    )
+    proj_dir = storage.namespace_dir("ns-pmeta-missing") / "projects" / "bare-proj"
     (proj_dir / "versions").mkdir(parents=True)
     meta = storage.get_project_meta("ns-pmeta-missing", "bare-proj")
     assert meta == {}
+
+
+def test_disk_usage_empty_returns_empty(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure disk_usage returns empty list when no namespaces exist."""
+    result = storage.disk_usage()
+    assert result == []
+
+
+def test_disk_usage_single_namespace(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure disk_usage returns one group for one namespace."""
+    storage.create_namespace("ns-du", display_name="DU Namespace")
+    result = storage.disk_usage()
+    assert len(result) == 1
+    group = result[0]
+    assert len(group.namespaces) == 1
+    ns = group.namespaces[0]
+    assert ns.name == "ns-du"
+    assert ns.display_name == "DU Namespace"
+    assert ns.size_bytes >= 0
+    assert group.total_bytes >= 0
+    assert group.free_bytes >= 0
+    assert group.used_bytes >= 0
+    assert len(group.mount_group) == 16
+
+
+def test_disk_usage_namespaces_on_same_device_share_group(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure namespaces on the same device appear in one group."""
+    storage.create_namespace("ns-a")
+    storage.create_namespace("ns-b")
+    result = storage.disk_usage()
+    # Both namespaces share the same tmp device.
+    assert len(result) == 1
+    names = {ns.name for ns in result[0].namespaces}
+    assert names == {"ns-a", "ns-b"}
+
+
+def test_disk_usage_mount_group_is_ephemeral(
+    storage: FilesystemStorage,
+) -> None:
+    """Ensure mount_group hash differs between calls."""
+    storage.create_namespace("ns-ephemeral")
+    result1 = storage.disk_usage()
+    result2 = storage.disk_usage()
+    # Hashes are salted per-call so they must differ.
+    assert result1[0].mount_group != result2[0].mount_group
+
+
+def test_disk_usage_namespace_size_includes_files(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure namespace size_bytes reflects actual file content."""
+    storage.create_namespace("ns-size")
+    storage.create_project("ns-size", "p")
+    src = make_source_dir(
+        tmp_path / "src",
+        {"index.html": "x" * 1000},
+    )
+    storage.create_version(
+        "ns-size",
+        "p",
+        "1.0",
+        "en",
+        src,
+        latest=True,
+        uploader_subject="user",
+        upload_timestamp="2024-01-01T00:00:00",
+    )
+    result = storage.disk_usage()
+    assert len(result) == 1
+    ns = result[0].namespaces[0]
+    assert ns.size_bytes >= 1000

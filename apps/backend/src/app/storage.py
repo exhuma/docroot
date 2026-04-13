@@ -11,10 +11,13 @@ concurrent uploads to the same version+locale slot.
 
 import errno
 import fcntl
+import hashlib
 import os
+import secrets
 import shutil
 import tomllib
 import uuid
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import tomlkit
@@ -42,6 +45,38 @@ class NamespaceNotFound(Exception):
 
 class ProjectNotFound(Exception):
     """Raised when a project directory does not exist."""
+
+
+@dataclass
+class NamespaceUsageInfo:
+    """Disk usage information for a single namespace.
+
+    :param name: Namespace slug.
+    :param display_name: Human-readable display name.
+    :param size_bytes: Total byte size of the namespace directory.
+    """
+
+    name: str
+    display_name: str
+    size_bytes: int
+
+
+@dataclass
+class MountGroupInfo:
+    """Disk usage for a group of namespaces on a shared mount point.
+
+    :param mount_group: Ephemeral hash identifying the mount point.
+    :param free_bytes: Free bytes available on the device.
+    :param total_bytes: Total capacity of the device in bytes.
+    :param used_bytes: Used bytes on the device.
+    :param namespaces: Namespace usage entries in this group.
+    """
+
+    mount_group: str
+    free_bytes: int
+    total_bytes: int
+    used_bytes: int
+    namespaces: list[NamespaceUsageInfo] = field(default_factory=list)
 
 
 def _write_toml_simple(
@@ -262,7 +297,7 @@ class FilesystemStorage:
         try:
             with open(toml_path, "rb") as fh:
                 return tomllib.load(fh)
-        except (tomllib.TOMLDecodeError, OSError):
+        except tomllib.TOMLDecodeError, OSError:
             return {}
 
     def get_project_meta(self, namespace: str, project: str) -> dict[str, object]:
@@ -279,7 +314,7 @@ class FilesystemStorage:
         try:
             with open(toml_path, "rb") as fh:
                 return tomllib.load(fh)
-        except (tomllib.TOMLDecodeError, OSError):
+        except tomllib.TOMLDecodeError, OSError:
             return {}
 
     # ------------------------------------------------------------------
@@ -359,6 +394,88 @@ class FilesystemStorage:
             for d in ns_dir.iterdir()
             if d.is_dir() and not d.name.startswith(".")
         )
+
+    def _dir_size(self, path: Path) -> int:
+        """Recursively compute the total byte size of a directory.
+
+        Symlinks are not followed to avoid double-counting or
+        infinite loops.
+
+        :param path: Directory path.
+        :returns: Total byte size of all files under *path*.
+        """
+        total = 0
+        try:
+            for entry in os.scandir(path):
+                if entry.is_dir(follow_symlinks=False):
+                    total += self._dir_size(Path(entry.path))
+                else:
+                    try:
+                        total += entry.stat(follow_symlinks=False).st_size
+                    except OSError:
+                        pass
+        except OSError:
+            pass
+        return total
+
+    def disk_usage(self) -> list[MountGroupInfo]:
+        """Return disk usage per namespace grouped by mount point.
+
+        Each mount point is identified by an ephemeral hash derived
+        from a per-call random salt and the underlying device ID.
+        This avoids exposing system-level device numbers while
+        still enabling grouping within a single response.
+
+        :returns: List of :class:`MountGroupInfo` sorted by
+            mount group hash.
+        """
+        salt = secrets.token_hex(16)
+        by_device: dict[int, list[str]] = {}
+        for name in self.list_namespaces():
+            ns_dir = self._namespace_dir(name)
+            try:
+                dev = os.stat(ns_dir).st_dev
+            except OSError:
+                continue
+            by_device.setdefault(dev, []).append(name)
+
+        result: list[MountGroupInfo] = []
+        for dev, ns_names in by_device.items():
+            raw = f"{salt}:{dev}".encode()
+            # 16 hex chars = 64 bits. Adequate for grouping a small
+            # number of mount points within one response; not intended
+            # for persistence or cross-request comparison.
+            mount_group = hashlib.sha256(raw).hexdigest()[:16]
+            first_dir = self._namespace_dir(ns_names[0])
+            try:
+                du = shutil.disk_usage(first_dir)
+                free_bytes = du.free
+                total_bytes = du.total
+                used_bytes = du.used
+            except OSError:
+                free_bytes = total_bytes = used_bytes = 0
+            ns_usages: list[NamespaceUsageInfo] = []
+            for name in sorted(ns_names):
+                meta = self.get_namespace_meta(name)
+                display_name = str(meta.get("display_name", ""))
+                size = self._dir_size(self._namespace_dir(name))
+                ns_usages.append(
+                    NamespaceUsageInfo(
+                        name=name,
+                        display_name=display_name,
+                        size_bytes=size,
+                    )
+                )
+            result.append(
+                MountGroupInfo(
+                    mount_group=mount_group,
+                    free_bytes=free_bytes,
+                    total_bytes=total_bytes,
+                    used_bytes=used_bytes,
+                    namespaces=ns_usages,
+                )
+            )
+        return sorted(result, key=lambda g: g.mount_group)
 
     # ------------------------------------------------------------------
     # Project operations

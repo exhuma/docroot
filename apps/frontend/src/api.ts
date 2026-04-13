@@ -10,6 +10,21 @@ export interface Namespace {
   creator_display_name: string
 }
 
+export interface NamespaceUsage {
+  name: string
+  display_name: string
+  size_bytes: number
+}
+
+export interface DiskUsageGroup {
+  mount_group: string
+  free_bytes: number
+  total_bytes: number
+  used_bytes: number
+  low_space: boolean
+  namespaces: NamespaceUsage[]
+}
+
 export interface Project {
   name: string
   display_name: string
@@ -116,12 +131,7 @@ export const api = {
     return handleResponse(res) as Promise<Project[]>
   },
 
-  async createProject(
-    ns: string,
-    name: string,
-    token: string,
-    versioning = '',
-  ): Promise<void> {
+  async createProject(ns: string, name: string, token: string, versioning = ''): Promise<void> {
     const res = await fetch(`${nsBase(ns)}/projects`, {
       method: 'POST',
       headers: {
@@ -267,5 +277,13 @@ export const api = {
       credentials: 'same-origin',
     })
     await handleResponse(res)
+  },
+
+  /** Return disk usage grouped by mount point. Requires authentication. */
+  async getDiskUsage(token: string): Promise<DiskUsageGroup[]> {
+    const res = await fetch(`${BASE}/disk-usage`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return handleResponse(res) as Promise<DiskUsageGroup[]>
   },
 }

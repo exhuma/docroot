@@ -5,6 +5,7 @@ via ``Annotated`` constraints. Validation errors produce HTTP 422
 responses automatically via FastAPI.
 """
 
+from app.schemas.disk_usage import DiskUsageGroupOut, NamespaceUsageOut
 from app.schemas.namespace import (
     AclFlagsIn,
     AclOut,
@@ -21,8 +22,10 @@ __all__ = [
     "AclOut",
     "AclRoleIn",
     "AclRoleOut",
+    "DiskUsageGroupOut",
     "NamespaceIn",
     "NamespaceOut",
+    "NamespaceUsageOut",
     "ProjectIn",
     "ProjectOut",
     "ResolveOut",

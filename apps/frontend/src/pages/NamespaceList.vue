@@ -4,6 +4,11 @@
     <v-toolbar-title>{{ t('namespaces') }}</v-toolbar-title>
     <v-spacer />
     <v-btn icon="mdi-help-circle-outline" :title="t('userManual')" :to="'/manual'" />
+    <v-btn
+      icon="mdi-chart-pie"
+      :title="t('diskUsage')"
+      :to="'/disk-usage'"
+    />
     <v-select
       v-model="uiLocale"
       class="mr-2"
