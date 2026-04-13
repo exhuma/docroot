@@ -90,3 +90,110 @@ def test_upload_missing_namespace_returns_404(tmp_path: Path) -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_upload_with_versioning_sets_project_scheme(tmp_path: Path) -> None:
+    """Upload with versioning creates project with that scheme."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace(
+        "myns",
+        creator=_WRITER_SUBJECT,
+        public_read=True,
+    )
+
+    zip_bytes = _make_zip_bytes({"index.html": "<h1>v1</h1>"})
+    response = client.post(
+        "/api/namespaces/myns/projects/semproj/upload",
+        files={"file": ("docs.zip", zip_bytes, "application/zip")},
+        data={"version": "1.0.0", "locale": "en", "versioning": "semver"},
+    )
+
+    assert response.status_code == 201
+    meta = storage.get_project_meta("myns", "semproj")
+    assert meta.get("versioning") == "semver"
+
+
+def test_upload_versioning_conflict_returns_409(tmp_path: Path) -> None:
+    """Upload with a different versioning scheme returns 409."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace(
+        "myns",
+        creator=_WRITER_SUBJECT,
+        public_read=True,
+    )
+    storage.create_project("myns", "proj", versioning="semver")
+
+    zip_bytes = _make_zip_bytes({"index.html": "<h1>v1</h1>"})
+    response = client.post(
+        "/api/namespaces/myns/projects/proj/upload",
+        files={"file": ("docs.zip", zip_bytes, "application/zip")},
+        data={"version": "1.0.0", "locale": "en", "versioning": "calver"},
+    )
+
+    assert response.status_code == 409
+    assert "calver" in response.json()["detail"]
+
+
+def test_upload_versioning_conflict_with_force_succeeds(tmp_path: Path) -> None:
+    """Upload with force=true bypasses versioning-scheme mismatch."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace(
+        "myns",
+        creator=_WRITER_SUBJECT,
+        public_read=True,
+    )
+    storage.create_project("myns", "proj", versioning="semver")
+
+    zip_bytes = _make_zip_bytes({"index.html": "<h1>v1</h1>"})
+    response = client.post(
+        "/api/namespaces/myns/projects/proj/upload",
+        files={"file": ("docs.zip", zip_bytes, "application/zip")},
+        data={
+            "version": "1.0.0",
+            "locale": "en",
+            "versioning": "calver",
+            "force": "true",
+        },
+    )
+
+    assert response.status_code == 201
+
+
+def test_upload_matching_versioning_scheme_succeeds(tmp_path: Path) -> None:
+    """Upload with matching versioning scheme passes without conflict."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace(
+        "myns",
+        creator=_WRITER_SUBJECT,
+        public_read=True,
+    )
+    storage.create_project("myns", "proj", versioning="semver")
+
+    zip_bytes = _make_zip_bytes({"index.html": "<h1>v1</h1>"})
+    response = client.post(
+        "/api/namespaces/myns/projects/proj/upload",
+        files={"file": ("docs.zip", zip_bytes, "application/zip")},
+        data={"version": "1.0.0", "locale": "en", "versioning": "semver"},
+    )
+
+    assert response.status_code == 201
+
+
+def test_upload_no_versioning_skips_conflict_check(tmp_path: Path) -> None:
+    """Upload without versioning never triggers the scheme check."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace(
+        "myns",
+        creator=_WRITER_SUBJECT,
+        public_read=True,
+    )
+    storage.create_project("myns", "proj", versioning="semver")
+
+    zip_bytes = _make_zip_bytes({"index.html": "<h1>v1</h1>"})
+    response = client.post(
+        "/api/namespaces/myns/projects/proj/upload",
+        files={"file": ("docs.zip", zip_bytes, "application/zip")},
+        data={"version": "1.0.0", "locale": "en"},
+    )
+
+    assert response.status_code == 201

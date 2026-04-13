@@ -11,6 +11,8 @@ const messages = {
     name: 'Name',
     version: 'Version',
     locale: 'Locale',
+    locales: 'Locales',
+    actions: 'Actions',
     latest: 'latest',
     setLatest: 'Set as latest',
     noNamespaces: 'No namespaces found.',
@@ -124,8 +126,7 @@ const messages = {
     ciClientId: 'CI Client ID',
     ciClientIdHint: 'The service-account client configured in your IDP',
     ciClientSecret: 'Client Secret',
-    ciClientSecretHint:
-      'Or an env-var reference, e.g. $CLIENT_SECRET',
+    ciClientSecretHint: 'Or an env-var reference, e.g. $CLIENT_SECRET',
     targetNamespace: 'Namespace',
     targetProject: 'Project',
     manualAutomatedText:
@@ -134,10 +135,8 @@ const messages = {
       ' set up first, a role must have write access,' +
       ' and the service account used for automated' +
       ' uploads must have that role assigned.',
-    manualAutomatedStep1:
-      'Create a namespace and project (once, by an admin).',
-    manualAutomatedStep2:
-      'Create a role with write access in the namespace ACL.',
+    manualAutomatedStep1: 'Create a namespace and project (once, by an admin).',
+    manualAutomatedStep2: 'Create a role with write access in the namespace ACL.',
     manualAutomatedStep3:
       'Create a service account (confidential client with' +
       ' client credentials) in your IDP and assign it' +
@@ -146,9 +145,7 @@ const messages = {
       'Use the client credentials flow in your pipeline' +
       ' to obtain a token, then upload the ZIP.',
     keycloakSetup: 'Keycloak Setup for CI/CD',
-    keycloakSetupText:
-      'To configure a service account for automated' +
-      ' uploads in Keycloak:',
+    keycloakSetupText: 'To configure a service account for automated' + ' uploads in Keycloak:',
     keycloakStep1:
       'Create a confidential client (e.g. my-ci-client)' +
       ' with "Service accounts enabled" ON and' +
@@ -160,9 +157,7 @@ const messages = {
     keycloakStep3:
       'Copy the client secret from the "Credentials" tab' +
       ' and store it in your CI/CD secret store.',
-    manualLimitationsText:
-      'This is an early beta release. The following' +
-      ' limitations apply:',
+    manualLimitationsText: 'This is an early beta release. The following' + ' limitations apply:',
     manualLimitationRole:
       'Role extraction is only implemented for Keycloak.' +
       ' OIDC authentication works with any standards-' +
@@ -190,6 +185,14 @@ const messages = {
     diskUsageSize: 'Size',
     diskUsageLoginRequired: 'Sign in to view disk usage.',
     diskUsageNoData: 'No namespaces found.',
+    versioningScheme: 'Versioning scheme',
+    versioningNone: 'None (lexicographic)',
+    versioningSemver: 'Semantic versioning — e.g. 1.2.3',
+    versioningCalver: 'Calendar versioning — e.g. 2024.01.15',
+    versioningPep440: 'PEP 440 (Python) — e.g. 1.2.3.post1',
+    versioningCustom: 'Custom regex',
+    versioningCustomLabel: 'Custom regex pattern',
+    versioningCustomHint: String.raw`A regular expression with named groups used to build the sort key, e.g. (?P<major>\d+)\.(?P<minor>\d+)`,
   },
   fr: {
     namespaces: 'Espaces de noms',
@@ -201,6 +204,8 @@ const messages = {
     name: 'Nom',
     version: 'Version',
     locale: 'Locale',
+    locales: 'Paramètres régionaux',
+    actions: 'Actions',
     latest: 'dernière',
     setLatest: 'Définir comme dernière',
     noNamespaces: 'Aucun espace de noms trouvé.',
@@ -306,14 +311,11 @@ const messages = {
       ' (ex. $MA_VARIABLE).',
     docrootUrl: 'URL Docroot',
     idpUrl: 'URL IDP / Token',
-    idpUrlHint:
-      'ex. https://keycloak.example.com/realms/myrealm',
+    idpUrlHint: 'ex. https://keycloak.example.com/realms/myrealm',
     ciClientId: 'ID client CI',
-    ciClientIdHint:
-      'Le client compte de service configuré dans votre IDP',
+    ciClientIdHint: 'Le client compte de service configuré dans votre IDP',
     ciClientSecret: 'Secret client',
-    ciClientSecretHint:
-      'Ou une référence de variable, ex. $CLIENT_SECRET',
+    ciClientSecretHint: 'Ou une référence de variable, ex. $CLIENT_SECRET',
     targetNamespace: 'Espace de noms',
     targetProject: 'Projet',
     manualAutomatedText:
@@ -323,11 +325,9 @@ const messages = {
       ' doit avoir un accès en écriture, et le compte de' +
       ' service doit avoir ce rôle.',
     manualAutomatedStep1:
-      'Créez un espace de noms et un projet (une fois,' +
-      ' par un administrateur).',
+      'Créez un espace de noms et un projet (une fois,' + ' par un administrateur).',
     manualAutomatedStep2:
-      "Créez un rôle avec accès en écriture dans l'ACL" +
-      " de l'espace de noms.",
+      "Créez un rôle avec accès en écriture dans l'ACL" + " de l'espace de noms.",
     manualAutomatedStep3:
       'Créez un compte de service (client confidentiel' +
       ' avec client credentials) dans votre IDP et' +
@@ -338,8 +338,7 @@ const messages = {
       ' le ZIP.',
     keycloakSetup: 'Configuration Keycloak pour CI/CD',
     keycloakSetupText:
-      'Pour configurer un compte de service pour les' +
-      ' uploads automatisés dans Keycloak :',
+      'Pour configurer un compte de service pour les' + ' uploads automatisés dans Keycloak :',
     keycloakStep1:
       'Créez un client confidentiel (ex. my-ci-client)' +
       ' avec "Comptes de service activés" ON et' +
@@ -353,8 +352,7 @@ const messages = {
       ` "Informations d'identification" et stockez-le` +
       ' dans le magasin de secrets CI/CD.',
     manualLimitationsText:
-      "Il s'agit d'une première version bêta." +
-      " Les limitations suivantes s'appliquent :",
+      "Il s'agit d'une première version bêta." + " Les limitations suivantes s'appliquent :",
     manualLimitationRole:
       "L'extraction des rôles est uniquement implémentée" +
       " pour Keycloak. L'authentification OIDC fonctionne" +
@@ -383,9 +381,16 @@ const messages = {
     diskUsageLowSpace: 'Espace disque insuffisant',
     diskUsageNamespace: 'Espace de noms',
     diskUsageSize: 'Taille',
-    diskUsageLoginRequired: 'Connectez-vous pour voir' +
-      " l'utilisation du disque.",
+    diskUsageLoginRequired: 'Connectez-vous pour voir' + " l'utilisation du disque.",
     diskUsageNoData: 'Aucun espace de noms trouvé.',
+    versioningScheme: 'Schéma de versionnement',
+    versioningNone: 'Aucun (ordre lexicographique)',
+    versioningSemver: 'Versionnement sémantique — ex. 1.2.3',
+    versioningCalver: 'Versionnement calendaire — ex. 2024.01.15',
+    versioningPep440: 'PEP 440 (Python) — ex. 1.2.3.post1',
+    versioningCustom: 'Expression régulière personnalisée',
+    versioningCustomLabel: 'Motif regex personnalisé',
+    versioningCustomHint: String.raw`Une expression régulière avec des groupes nommés pour construire la clé de tri, ex. (?P<major>\d+)\.(?P<minor>\d+)`,
   },
   de: {
     namespaces: 'Namensräume',
@@ -397,6 +402,8 @@ const messages = {
     name: 'Name',
     version: 'Version',
     locale: 'Sprachversion',
+    locales: 'Sprachversionen',
+    actions: 'Aktionen',
     latest: 'aktuell',
     setLatest: 'Als aktuell markieren',
     noNamespaces: 'Keine Namensräume gefunden.',
@@ -499,14 +506,11 @@ const messages = {
       ' Umgebungsvariablen angeben (z.B. $MEINE_VAR).',
     docrootUrl: 'Docroot-URL',
     idpUrl: 'IDP / Token-URL',
-    idpUrlHint:
-      'z.B. https://keycloak.example.com/realms/myrealm',
+    idpUrlHint: 'z.B. https://keycloak.example.com/realms/myrealm',
     ciClientId: 'CI Client-ID',
-    ciClientIdHint:
-      'Der Dienstkonto-Client in Ihrem IDP',
+    ciClientIdHint: 'Der Dienstkonto-Client in Ihrem IDP',
     ciClientSecret: 'Client-Secret',
-    ciClientSecretHint:
-      'Oder eine Umgebungsvariable, z.B. $CLIENT_SECRET',
+    ciClientSecretHint: 'Oder eine Umgebungsvariable, z.B. $CLIENT_SECRET',
     targetNamespace: 'Namensraum',
     targetProject: 'Projekt',
     manualAutomatedText:
@@ -516,11 +520,8 @@ const messages = {
       ' muss Schreibzugriff haben und das Dienstkonto' +
       ' muss diese Rolle haben.',
     manualAutomatedStep1:
-      'Erstellen Sie einen Namensraum und ein Projekt' +
-      ' (einmalig, durch einen Administrator).',
-    manualAutomatedStep2:
-      'Erstellen Sie eine Rolle mit Schreibzugriff' +
-      ' in der Namespace-ACL.',
+      'Erstellen Sie einen Namensraum und ein Projekt' + ' (einmalig, durch einen Administrator).',
+    manualAutomatedStep2: 'Erstellen Sie eine Rolle mit Schreibzugriff' + ' in der Namespace-ACL.',
     manualAutomatedStep3:
       'Erstellen Sie ein Dienstkonto (vertraulicher' +
       ' Client mit Client Credentials) in Ihrem IDP' +
@@ -531,8 +532,7 @@ const messages = {
       ' und laden Sie dann das ZIP hoch.',
     keycloakSetup: 'Keycloak-Einrichtung für CI/CD',
     keycloakSetupText:
-      'So konfigurieren Sie ein Dienstkonto für' +
-      ' automatisierte Uploads in Keycloak:',
+      'So konfigurieren Sie ein Dienstkonto für' + ' automatisierte Uploads in Keycloak:',
     keycloakStep1:
       'Erstellen Sie einen vertraulichen Client' +
       ' (z.B. my-ci-client) mit aktivierten' +
@@ -546,8 +546,7 @@ const messages = {
       ' "Anmeldeinformationen"-Tab und speichern Sie es' +
       ' in Ihrem CI/CD-Secret-Speicher.',
     manualLimitationsText:
-      'Dies ist eine frühe Beta-Version.' +
-      ' Folgende Einschränkungen gelten:',
+      'Dies ist eine frühe Beta-Version.' + ' Folgende Einschränkungen gelten:',
     manualLimitationRole:
       'Die Rollenextraktion ist nur für Keycloak' +
       ' implementiert. Die OIDC-Authentifizierung' +
@@ -576,9 +575,16 @@ const messages = {
     diskUsageLowSpace: 'Wenig Speicherplatz',
     diskUsageNamespace: 'Namensraum',
     diskUsageSize: 'Größe',
-    diskUsageLoginRequired:
-      'Melden Sie sich an, um die Festplattennutzung zu sehen.',
+    diskUsageLoginRequired: 'Melden Sie sich an, um die Festplattennutzung zu sehen.',
     diskUsageNoData: 'Keine Namensräume gefunden.',
+    versioningScheme: 'Versionierungsschema',
+    versioningNone: 'Keins (lexikografisch)',
+    versioningSemver: 'Semantische Versionierung — z.B. 1.2.3',
+    versioningCalver: 'Kalender-Versionierung — z.B. 2024.01.15',
+    versioningPep440: 'PEP 440 (Python) — z.B. 1.2.3.post1',
+    versioningCustom: 'Benutzerdefinierter regulärer Ausdruck',
+    versioningCustomLabel: 'Benutzerdefiniertes Regex-Muster',
+    versioningCustomHint: String.raw`Ein regulärer Ausdruck mit benannten Gruppen für die Sortierschlüssel, z.B. (?P<major>\d+)\.(?P<minor>\d+)`,
   },
 }
 
