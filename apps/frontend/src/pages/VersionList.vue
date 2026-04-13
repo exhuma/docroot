@@ -16,46 +16,59 @@
       {{ error }}
     </v-alert>
 
-    <v-row v-if="versions.length > 0">
-      <v-col v-for="ver in versions" :key="ver.name" cols="12" md="6">
-        <v-card>
-          <v-card-title>
-            {{ ver.name }}
-            <v-chip v-if="ver.is_latest" class="ml-2" color="green" label size="small">
-              {{ t('latest') }}
-            </v-chip>
-          </v-card-title>
-          <v-card-text>
-            <v-chip v-for="loc in ver.locales" :key="loc" class="mr-1" label size="small">
-              {{ loc }}
-            </v-chip>
-          </v-card-text>
-          <v-card-actions>
-            <v-select
-              v-model="selectedLocale[ver.name]"
-              density="compact"
-              hide-details
-              :items="ver.locales"
-              :label="t('selectLocale')"
-              style="max-width: 120px"
-              variant="solo"
-            />
-            <v-btn
-              color="primary"
-              :disabled="!selectedLocale[ver.name]"
-              @click="viewDocs(ver.name)"
-            >
-              {{ t('viewDocs') }}
-            </v-btn>
-            <v-btn v-if="isAuthenticated() && !ver.is_latest" @click="onSetLatest(ver.name)">
-              {{ t('setLatest') }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
-    </v-row>
+    <v-data-table
+      :headers="headers"
+      item-value="name"
+      :items="versions"
+      :items-per-page="-1"
+      :no-data-text="t('noVersions')"
+    >
+      <template #item.name="{ item }">
+        {{ item.name }}
+        <v-chip v-if="item.is_latest" class="ml-2" color="green" label size="small">
+          {{ t('latest') }}
+        </v-chip>
+      </template>
 
-    <v-empty-state v-else-if="!loading" :title="t('noVersions')" />
+      <template #item.locales="{ item }">
+        <v-chip v-for="loc in item.locales" :key="loc" class="mr-1" label size="small">
+          {{ loc }}
+        </v-chip>
+      </template>
+
+      <template #item.actions="{ item }">
+        <div class="d-flex align-center ga-2">
+          <v-select
+            v-model="selectedLocale[item.name]"
+            density="compact"
+            hide-details
+            :items="item.locales"
+            :label="t('selectLocale')"
+            style="min-width: 120px"
+            variant="solo"
+          />
+          <v-btn
+            color="primary"
+            density="compact"
+            :disabled="!selectedLocale[item.name]"
+            size="small"
+            @click="viewDocs(item.name)"
+          >
+            {{ t('viewDocs') }}
+          </v-btn>
+          <v-btn
+            v-if="isAuthenticated() && !item.is_latest"
+            density="compact"
+            size="small"
+            @click="onSetLatest(item.name)"
+          >
+            {{ t('setLatest') }}
+          </v-btn>
+        </div>
+      </template>
+
+      <template #bottom />
+    </v-data-table>
   </v-container>
 
   <UploadDialog
@@ -69,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { api, type VersionInfo } from '@/api'
@@ -88,6 +101,12 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const uploadDialog = ref(false)
 const selectedLocale = reactive<Record<string, string>>({})
+
+const headers = computed(() => [
+  { title: t('version'), key: 'name', sortable: false },
+  { title: t('locales'), key: 'locales', sortable: false },
+  { title: t('actions'), key: 'actions', sortable: false },
+])
 
 async function load() {
   loading.value = true
