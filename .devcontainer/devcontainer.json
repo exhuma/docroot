@@ -8,7 +8,8 @@
 		"ghcr.io/devcontainers/features/python:1": {}
 	},
 	"remoteEnv": {
-		"UV_LINK_MODE": "copy"
+		"UV_LINK_MODE": "copy",
+		"DOCROOT_API_OAUTH_JWKS_URL": "file:///workspaces/docroot/deploy/dev/jwks.json"
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
