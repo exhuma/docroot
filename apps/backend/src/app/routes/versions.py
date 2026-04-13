@@ -78,7 +78,7 @@ async def list_versions(
         ns_meta = storage.get_namespace_meta(namespace)
         versioning = str(ns_meta.get("versioning", ""))
     if versioning:
-        versions = sort_versions(versions, versioning)
+        versions = reversed(sort_versions(versions, versioning))
     current_latest = storage.get_latest(namespace, project)
     result: list[VersionOut] = []
     for v in versions:
@@ -200,7 +200,11 @@ async def upload_version(
     elif requested_versioning:
         proj_meta = storage.get_project_meta(namespace, project)
         stored_versioning = str(proj_meta.get("versioning", ""))
-        if stored_versioning and stored_versioning != requested_versioning and not force:
+        if (
+            stored_versioning
+            and stored_versioning != requested_versioning
+            and not force
+        ):
             raise HTTPException(
                 status_code=409,
                 detail=(
