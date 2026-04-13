@@ -107,14 +107,21 @@ def _write_namespace_toml(
     path.write_text(tomlkit.dumps(doc), encoding="utf-8")
 
 
-def _write_project_toml(path: Path, display_name: str) -> None:
-    """Write a project.toml file with the project display name.
+def _write_project_toml(
+    path: Path,
+    display_name: str,
+    versioning: str = "",
+) -> None:
+    """Write a project.toml file with project metadata.
 
     :param path: Destination path.
     :param display_name: Human-readable project display name.
+    :param versioning: Optional versioning scheme name or regex.
     """
     doc = tomlkit.document()
     doc.add("display_name", display_name)
+    if versioning:
+        doc.add("versioning", versioning)
     path.write_text(tomlkit.dumps(doc), encoding="utf-8")
 
 
@@ -255,7 +262,7 @@ class FilesystemStorage:
         try:
             with open(toml_path, "rb") as fh:
                 return tomllib.load(fh)
-        except tomllib.TOMLDecodeError, OSError:
+        except (tomllib.TOMLDecodeError, OSError):
             return {}
 
     def get_project_meta(self, namespace: str, project: str) -> dict[str, object]:
@@ -272,7 +279,7 @@ class FilesystemStorage:
         try:
             with open(toml_path, "rb") as fh:
                 return tomllib.load(fh)
-        except tomllib.TOMLDecodeError, OSError:
+        except (tomllib.TOMLDecodeError, OSError):
             return {}
 
     # ------------------------------------------------------------------
@@ -362,12 +369,14 @@ class FilesystemStorage:
         namespace: str,
         project: str,
         display_name: str = "",
+        versioning: str = "",
     ) -> None:
         """Create a project directory within a namespace.
 
         :param namespace: Namespace slug.
         :param project: Project slug (filesystem directory name).
         :param display_name: Human-readable project display name.
+        :param versioning: Versioning scheme name or regex string.
         :raises NamespaceNotFound: If the namespace does not exist.
         """
         ns_dir = self._namespace_dir(namespace)
@@ -379,7 +388,11 @@ class FilesystemStorage:
         (proj_dir / "versions").mkdir(exist_ok=True)
         toml_path = proj_dir / "project.toml"
         if not toml_path.exists():
-            _write_project_toml(toml_path, display_name or project)
+            _write_project_toml(
+                toml_path,
+                display_name or project,
+                versioning=versioning,
+            )
         _log.info("Project created: %s/%s", namespace, project)
 
     def delete_project(self, namespace: str, project: str) -> None:

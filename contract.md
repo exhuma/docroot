@@ -91,7 +91,13 @@ Project directory:
 
 ```
 display_name = "<human-readable project name>"
+versioning = "<scheme>"
 ```
+
+The ``versioning`` field is optional.  Supported values: ``semver``,
+``calver``, ``pep440``, or a custom regex pattern with named groups used
+for sort-key construction.  When absent, versions are listed in
+lexicographic order.
 
 Version directory:
 
@@ -117,8 +123,11 @@ Namespace directory:
 creator = "<subject>"
 creator_display_name = "<display name>"
 display_name = "<human-readable namespace name>"
-versioning = "<scheme>"
 ```
+
+Note: the ``versioning`` field has moved to ``project.toml``.  Any
+``versioning`` entry that still exists in ``namespace.toml`` is used as a
+fallback when the project does not specify its own scheme.
 
 ---
 
@@ -216,6 +225,10 @@ Multipart form:
 * `latest`: boolean (optional, default false)
 * `uploader_subject`: string (optional)
 * `upload_timestamp`: string (optional; RFC3339 recommended)
+* `versioning`: versioning scheme string (optional; used when creating the
+  project implicitly, or to validate the stored scheme has not changed)
+* `force`: boolean (optional, default false; bypasses versioning-scheme
+  mismatch check)
 
 Validation:
 

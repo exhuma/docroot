@@ -72,8 +72,11 @@ async def list_versions(
         raise HTTPException(status_code=404, detail="Project not found")
     require_browse(namespace, storage, acl, auth)
     versions = storage.list_versions(namespace, project)
-    ns_meta = storage.get_namespace_meta(namespace)
-    versioning = str(ns_meta.get("versioning", ""))
+    proj_meta = storage.get_project_meta(namespace, project)
+    versioning = str(proj_meta.get("versioning", ""))
+    if not versioning:
+        ns_meta = storage.get_namespace_meta(namespace)
+        versioning = str(ns_meta.get("versioning", ""))
     if versioning:
         versions = sort_versions(versions, versioning)
     current_latest = storage.get_latest(namespace, project)
@@ -136,6 +139,8 @@ async def upload_version(
     latest: Annotated[bool, Form()] = False,
     uploader_subject: Annotated[str | None, Form()] = None,
     upload_timestamp: Annotated[str | None, Form()] = None,
+    versioning: Annotated[str | None, Form()] = None,
+    force: Annotated[bool, Form()] = False,
     auth: Annotated[AuthContext | None, Depends(get_optional_auth)] = None,
     storage: FilesystemStorage = Depends(get_storage),
     acl: AclCache = Depends(get_acl),
@@ -146,6 +151,13 @@ async def upload_version(
     ``metadata.toml`` file in the archive (if present) is
     discarded; the server generates it from the supplied form
     fields.
+
+    When the project does not yet exist it is created implicitly
+    using the supplied ``versioning`` scheme (if any).
+
+    When the project already exists and a ``versioning`` value is
+    supplied that differs from the stored scheme, the upload is
+    rejected with **409** unless ``force=true`` is also provided.
 
     Requires write access to the namespace.
 
@@ -159,19 +171,45 @@ async def upload_version(
     :param latest: Set as latest after upload (form field).
     :param uploader_subject: Override uploader identity.
     :param upload_timestamp: ISO 8601 timestamp (form field).
+    :param versioning: Versioning scheme for the project
+        (form field).  Only used when the project does not yet
+        exist, or to validate that the stored scheme has not
+        changed.
+    :param force: When ``true``, bypass a versioning-scheme
+        mismatch and proceed with the upload (form field).
     :param auth: Optional authenticated principal (injected).
     :param storage: Storage instance (injected).
     :param acl: ACL cache instance (injected).
     :returns: ``{"status": "created"}``.
     :raises 404: If the namespace does not exist.
+    :raises 409: If the versioning scheme conflicts with the
+        stored project scheme and ``force`` is not set.
     :raises 422: If the ZIP fails validation.
     :raises 409: If the version+locale already exists.
     """
     if not storage.namespace_exists(namespace):
         raise HTTPException(status_code=404, detail="Namespace not found")
     require_write(namespace, storage, acl, auth)
+    requested_versioning = versioning or ""
     if not storage.project_exists(namespace, project):
-        storage.create_project(namespace, project)
+        storage.create_project(
+            namespace,
+            project,
+            versioning=requested_versioning,
+        )
+    elif requested_versioning:
+        proj_meta = storage.get_project_meta(namespace, project)
+        stored_versioning = str(proj_meta.get("versioning", ""))
+        if stored_versioning and stored_versioning != requested_versioning and not force:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"Versioning scheme mismatch: project uses "
+                    f"'{stored_versioning}' but upload specifies "
+                    f"'{requested_versioning}'. "
+                    f"Pass force=true to override."
+                ),
+            )
 
     subject = uploader_subject or (auth.subject if auth else "")
     await install_upload(

@@ -62,7 +62,10 @@ async def list_projects(
     for n in names:
         meta = storage.get_project_meta(namespace, n)
         display_name = str(meta.get("display_name", ""))
-        result.append(ProjectOut(name=n, display_name=display_name))
+        versioning = str(meta.get("versioning", ""))
+        result.append(
+            ProjectOut(name=n, display_name=display_name, versioning=versioning)
+        )
     return result
 
 
@@ -107,10 +110,10 @@ async def create_project(
             ),
         )
     try:
-        storage.create_project(namespace, slug, display_name=body.name)
+        storage.create_project(namespace, slug, display_name=body.name, versioning=body.versioning)
     except NamespaceNotFound:
         raise HTTPException(status_code=404, detail="Namespace not found")
-    return ProjectOut(name=slug, display_name=body.name)
+    return ProjectOut(name=slug, display_name=body.name, versioning=body.versioning)
 
 
 @router.delete(
