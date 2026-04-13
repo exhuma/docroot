@@ -11,11 +11,21 @@ The home page lists all namespaces you can access.  Click a
 namespace to see its projects, then click a project to see its
 versions.  Click a version to open the documentation viewer.
 
-### Latest version
+### Refs (named tags)
 
-Each project can mark one version as **latest**.  Navigating
-to a project without specifying a version opens the one tagged
-`latest`.
+A project can have any number of named **refs** (tags) that
+point to a specific version — similar to git tags or Docker
+tags.  `latest` is a conventional ref name with no special
+meaning beyond that convention.
+
+To navigate directly to a ref, use the ref URL path:
+
+```
+/{namespace}/{project}/ref/{refname}/{locale}/
+```
+
+Refs are managed by authors via the **Manage refs** button
+(tag icon) on the version list.
 
 ### Locale variants
 

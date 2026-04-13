@@ -26,8 +26,15 @@
     >
       <template #item.name="{ item }">
         {{ item.name }}
-        <v-chip v-if="item.is_latest" class="ml-2" color="green" label size="small">
-          {{ t('latest') }}
+        <v-chip
+          v-for="ref in item.refs"
+          :key="ref"
+          class="ml-2"
+          :color="ref === 'latest' ? 'green' : 'teal'"
+          label
+          size="small"
+        >
+          {{ ref }}
         </v-chip>
       </template>
 
@@ -46,14 +53,14 @@
 
       <template #item.actions="{ item }">
         <div class="d-flex justify-end">
-          <v-menu v-if="isAuthenticated() && !item.is_latest">
-            <template #activator="{ props }">
-              <v-btn density="compact" icon="mdi-dots-vertical" size="small" v-bind="props" />
-            </template>
-            <v-list>
-              <v-list-item :title="t('setLatest')" @click="onSetLatest(item.name)" />
-            </v-list>
-          </v-menu>
+          <v-btn
+            v-if="isAuthenticated()"
+            density="compact"
+            icon="mdi-tag-multiple"
+            size="small"
+            :title="t('manageRefs')"
+            @click="openRefDialog(item.name)"
+          />
         </div>
       </template>
 
@@ -69,6 +76,16 @@
     :token="token"
     @uploaded="onUploaded"
   />
+
+  <RefManageDialog
+    v-if="refDialog && token"
+    v-model="refDialog"
+    :namespace="namespace"
+    :project="project"
+    :token="token"
+    :version="refDialogVersion"
+    @updated="load"
+  />
 </template>
 
 <script setup lang="ts">
@@ -78,6 +95,7 @@ import { useRoute } from 'vue-router'
 import { api, type VersionInfo } from '@/api'
 import { isAuthenticated, token } from '@/auth'
 import AuthBar from '@/components/AuthBar.vue'
+import RefManageDialog from '@/components/RefManageDialog.vue'
 import UploadDialog from '@/components/UploadDialog.vue'
 
 const { t } = useI18n()
@@ -89,6 +107,8 @@ const versions = ref<VersionInfo[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const uploadDialog = ref(false)
+const refDialog = ref(false)
+const refDialogVersion = ref('')
 
 const headers = computed(() => [
   { title: t('version'), key: 'name', sortable: false, width: '180px' },
@@ -108,19 +128,14 @@ async function load() {
   }
 }
 
-async function onSetLatest(version: string) {
-  if (!token.value) return
-  try {
-    await api.setLatest(namespace, project, version, token.value)
-    await load()
-  } catch (error_) {
-    error.value = (error_ as Error).message
-  }
-}
-
 async function onUploaded() {
   uploadDialog.value = false
   await load()
+}
+
+function openRefDialog(version: string) {
+  refDialogVersion.value = version
+  refDialog.value = true
 }
 
 onMounted(load)

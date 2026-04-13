@@ -60,7 +60,7 @@ def _pep440_key(version: str) -> object:
         from packaging.version import InvalidVersion, Version
 
         return Version(version)
-    except (InvalidVersion, ImportError):
+    except InvalidVersion, ImportError:
         return version
 
 
@@ -118,7 +118,7 @@ def sort_versions(
 
                 Version(v)
                 good.append(v)
-            except (InvalidVersion, ImportError):
+            except InvalidVersion, ImportError:
                 bad.append(v)
         try:
             good.sort(key=_pep440_key)

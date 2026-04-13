@@ -6,6 +6,7 @@ import pytest
 
 from app.storage import (
     FilesystemStorage,
+    RefNotFound,
     VersionConflict,
     VersionNotFound,
 )
@@ -64,7 +65,7 @@ def test_create_version_basic(storage: FilesystemStorage, tmp_path: Path):
         "1.0.0",
         "en",
         src,
-        False,
+        None,
         "user@test",
         "2024-01-01T00:00:00Z",
     )
@@ -86,7 +87,7 @@ def test_create_version_conflict(storage: FilesystemStorage, tmp_path: Path):
         "1.0.0",
         "en",
         src1,
-        False,
+        None,
         "user",
         "2024-01-01T00:00:00Z",
     )
@@ -101,14 +102,14 @@ def test_create_version_conflict(storage: FilesystemStorage, tmp_path: Path):
             "1.0.0",
             "en",
             src2,
-            False,
+            None,
             "user",
             "2024-01-01T00:00:00Z",
         )
 
 
 def test_resolve_version_latest(storage: FilesystemStorage, tmp_path: Path):
-    """Ensure resolve_version resolves the 'latest' alias."""
+    """Ensure resolve_version resolves the 'latest' ref alias."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
     src = make_source_dir(
@@ -121,7 +122,7 @@ def test_resolve_version_latest(storage: FilesystemStorage, tmp_path: Path):
         "2.0",
         "en",
         src,
-        True,
+        "latest",
         "user",
         "2024-01-01T00:00:00Z",
     )
@@ -144,7 +145,7 @@ def test_resolve_locale_fallback(storage: FilesystemStorage, tmp_path: Path):
         "1.0",
         "en",
         src,
-        False,
+        None,
         "user",
         "2024-01-01T00:00:00Z",
     )
@@ -156,7 +157,7 @@ def test_resolve_locale_fallback(storage: FilesystemStorage, tmp_path: Path):
 def test_resolve_version_latest_not_set(
     storage: FilesystemStorage,
 ):
-    """Ensure resolving 'latest' without a symlink raises error."""
+    """Ensure resolving an unset ref raises VersionNotFound."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
     with pytest.raises(VersionNotFound):
@@ -177,7 +178,7 @@ def test_resolve_locale_not_found(storage: FilesystemStorage, tmp_path: Path):
         "1.0",
         "de",
         src,
-        False,
+        None,
         "user",
         "2024-01-01T00:00:00Z",
     )
@@ -187,8 +188,8 @@ def test_resolve_locale_not_found(storage: FilesystemStorage, tmp_path: Path):
     assert locale == "de"
 
 
-def test_delete_version_updates_latest(storage: FilesystemStorage, tmp_path: Path):
-    """Ensure deleting the latest version updates the symlink."""
+def test_delete_version_ref_preserved(storage: FilesystemStorage, tmp_path: Path):
+    """Ensure deleting a version preserves refs but breaks resolution."""
     storage.create_namespace("ns")
     storage.create_project("ns", "proj")
     src1 = make_source_dir(tmp_path / "src1", {"index.html": "<h1>v1</h1>"})
@@ -198,7 +199,7 @@ def test_delete_version_updates_latest(storage: FilesystemStorage, tmp_path: Pat
         "1.0",
         "en",
         src1,
-        True,
+        "latest",
         "user",
         "2024-01-01T00:00:00Z",
     )
@@ -209,14 +210,20 @@ def test_delete_version_updates_latest(storage: FilesystemStorage, tmp_path: Pat
         "2.0",
         "en",
         src2,
-        False,
+        None,
         "user",
         "2024-06-01T00:00:00Z",
     )
-    storage.set_latest("ns", "proj", "2.0")
-    assert storage.get_latest("ns", "proj") == "2.0"
+    storage.set_ref("ns", "proj", "latest", "2.0")
+    refs = storage.list_refs("ns", "proj")
+    assert refs.get("latest") == "2.0"
     storage.delete_version("ns", "proj", "2.0", "en")
-    assert storage.get_latest("ns", "proj") == "1.0"
+    # Ref still exists after deletion.
+    refs = storage.list_refs("ns", "proj")
+    assert refs.get("latest") == "2.0"
+    # But resolving it now raises VersionNotFound.
+    with pytest.raises(VersionNotFound):
+        storage.resolve_version("ns", "proj", "latest", "en")
 
 
 def test_create_namespace_no_creator_role(
@@ -560,11 +567,129 @@ def test_disk_usage_namespace_size_includes_files(
         "1.0",
         "en",
         src,
-        latest=True,
-        uploader_subject="user",
-        upload_timestamp="2024-01-01T00:00:00",
+        None,
+        "user",
+        "2024-01-01T00:00:00",
     )
     result = storage.disk_usage()
     assert len(result) == 1
     ns = result[0].namespaces[0]
     assert ns.size_bytes >= 1000
+
+
+# ------------------------------------------------------------------
+# Ref tests
+# ------------------------------------------------------------------
+
+
+def test_set_ref_creates_symlink(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure set_ref creates a symlink inside refs/."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    src = make_source_dir(tmp_path / "src", {"index.html": "<h1/>"})
+    storage.create_version("ns", "proj", "1.0", "en", src, None, "u", "")
+    storage.set_ref("ns", "proj", "latest", "1.0")
+    refs = storage.list_refs("ns", "proj")
+    assert refs == {"latest": "1.0"}
+
+
+def test_set_ref_updates_existing(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure set_ref atomically replaces an existing ref."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    src1 = make_source_dir(tmp_path / "s1", {"index.html": ""})
+    src2 = make_source_dir(tmp_path / "s2", {"index.html": ""})
+    storage.create_version("ns", "proj", "1.0", "en", src1, None, "u", "")
+    storage.create_version("ns", "proj", "2.0", "en", src2, None, "u", "")
+    storage.set_ref("ns", "proj", "latest", "1.0")
+    storage.set_ref("ns", "proj", "latest", "2.0")
+    assert storage.list_refs("ns", "proj")["latest"] == "2.0"
+
+
+def test_get_ref_not_found(storage: FilesystemStorage) -> None:
+    """Ensure get_ref raises RefNotFound for a missing ref."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    with pytest.raises(RefNotFound):
+        storage.get_ref("ns", "proj", "missing")
+
+
+def test_list_refs_empty(storage: FilesystemStorage) -> None:
+    """Ensure list_refs returns empty dict for a new project."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    assert storage.list_refs("ns", "proj") == {}
+
+
+def test_list_refs_populated(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure list_refs returns the correct name-to-version map."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    src1 = make_source_dir(tmp_path / "s1", {"index.html": ""})
+    src2 = make_source_dir(tmp_path / "s2", {"index.html": ""})
+    storage.create_version("ns", "proj", "1.0", "en", src1, None, "u", "")
+    storage.create_version("ns", "proj", "2.0", "en", src2, None, "u", "")
+    storage.set_ref("ns", "proj", "latest", "2.0")
+    storage.set_ref("ns", "proj", "stable", "1.0")
+    refs = storage.list_refs("ns", "proj")
+    assert refs == {"latest": "2.0", "stable": "1.0"}
+
+
+def test_delete_ref(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure delete_ref removes the ref symlink."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    src = make_source_dir(tmp_path / "src", {"index.html": ""})
+    storage.create_version("ns", "proj", "1.0", "en", src, None, "u", "")
+    storage.set_ref("ns", "proj", "latest", "1.0")
+    storage.delete_ref("ns", "proj", "latest")
+    assert storage.list_refs("ns", "proj") == {}
+
+
+def test_delete_ref_not_found(storage: FilesystemStorage) -> None:
+    """Ensure delete_ref raises RefNotFound for a missing ref."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    with pytest.raises(RefNotFound):
+        storage.delete_ref("ns", "proj", "no-such-ref")
+
+
+def test_resolve_via_ref(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure resolve_version resolves any ref name, not just 'latest'."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    src = make_source_dir(tmp_path / "src", {"index.html": ""})
+    storage.create_version("ns", "proj", "3.0", "en", src, None, "u", "")
+    storage.set_ref("ns", "proj", "stable", "3.0")
+    version, locale = storage.resolve_version("ns", "proj", "stable", "en")
+    assert version == "3.0"
+    assert locale == "en"
+
+
+def test_resolve_broken_ref(
+    storage: FilesystemStorage,
+    tmp_path: Path,
+) -> None:
+    """Ensure resolving a ref to a deleted version raises VersionNotFound."""
+    storage.create_namespace("ns")
+    storage.create_project("ns", "proj")
+    src = make_source_dir(tmp_path / "src", {"index.html": ""})
+    storage.create_version("ns", "proj", "1.0", "en", src, "latest", "u", "")
+    storage.delete_version("ns", "proj", "1.0", "en")
+    with pytest.raises(VersionNotFound):
+        storage.resolve_version("ns", "proj", "latest", "en")

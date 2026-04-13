@@ -63,17 +63,29 @@ Navigate into the namespace and click **New project**.
 3. Select your ZIP file.
 4. Enter the version string (e.g. `1.0.0` or `main`).
 5. Select the locale (e.g. `en`).
-6. Tick **Set as latest** if this upload should become
-   the default version.
+6. Optionally enter a **Ref / tag** name (e.g. `latest`) to
+   attach a named pointer to this version.  Leave the field
+   blank to upload without any ref.
 7. Click **Upload**.
 
 The version appears in the list once processing completes.
 
 ---
 
-## Managing "Latest"
+## Refs (Tags)
 
-The version tagged **latest** is the one opened when a visitor
-does not request a specific version.  Only one version per
-namespace/project/locale combination can be `latest` at a time.
-Uploading with **Set as latest** re-tags automatically.
+A **ref** is a named pointer to a specific version, similar to
+a git tag or a Docker tag.  Refs are stored in the project's
+`refs/` directory as symlinks.
+
+- Any ref name is valid.  `latest` is a conventional name
+  with no special meaning beyond convention.
+- Multiple refs can point to the same version.
+- Refs can be created, updated, or deleted independently of
+  the version through the **Manage refs** button (tag icon)
+  on any version row.
+- A visitor who navigates to a project using a ref URL
+  (e.g. `.../ref/latest/en/`) is served the documentation
+  for whichever version the ref currently points to.
+- If a version is deleted while a ref still points to it,
+  the ref is kept but returns a 404 until reassigned.

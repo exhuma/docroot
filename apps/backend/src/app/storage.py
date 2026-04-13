@@ -47,6 +47,10 @@ class ProjectNotFound(Exception):
     """Raised when a project directory does not exist."""
 
 
+class RefNotFound(Exception):
+    """Raised when a named ref does not exist."""
+
+
 @dataclass
 class NamespaceUsageInfo:
     """Disk usage information for a single namespace.
@@ -244,6 +248,14 @@ class FilesystemStorage:
         """
         return self._version_dir(namespace, project, version) / locale
 
+    def _refs_dir(self, namespace: str, project: str) -> Path:
+        """Return the path to the refs directory for a project.
+
+        :param namespace: Namespace name.
+        :param project: Project name.
+        """
+        return self._project_dir(namespace, project) / "refs"
+
     # ------------------------------------------------------------------
     # Public helpers for route-layer use
     # ------------------------------------------------------------------
@@ -272,18 +284,6 @@ class FilesystemStorage:
         :returns: True if the project exists.
         """
         return self._project_dir(namespace, project).is_dir()
-
-    def get_latest(self, namespace: str, project: str) -> str | None:
-        """Return the version pointed to by the latest symlink.
-
-        :param namespace: Namespace name.
-        :param project: Project name.
-        :returns: Version string or ``None`` if no symlink is set.
-        """
-        link = self._project_dir(namespace, project) / "latest"
-        if link.is_symlink():
-            return os.readlink(link)
-        return None
 
     def get_namespace_meta(self, namespace: str) -> dict[str, object]:
         """Return the raw parsed namespace.toml for a namespace.
@@ -503,6 +503,7 @@ class FilesystemStorage:
         proj_dir = self._project_dir(namespace, project)
         proj_dir.mkdir(parents=True, exist_ok=True)
         (proj_dir / "versions").mkdir(exist_ok=True)
+        (proj_dir / "refs").mkdir(exist_ok=True)
         toml_path = proj_dir / "project.toml"
         if not toml_path.exists():
             _write_project_toml(
@@ -560,7 +561,7 @@ class FilesystemStorage:
         version: str,
         locale: str,
         source_dir: Path,
-        latest: bool,
+        ref: str | None,
         uploader_subject: str,
         upload_timestamp: str,
     ) -> None:
@@ -574,7 +575,8 @@ class FilesystemStorage:
         :param version: Version string.
         :param locale: Two-letter locale code.
         :param source_dir: Directory with extracted ZIP content.
-        :param latest: Whether to update the latest symlink.
+        :param ref: Optional ref name to assign after install
+            (e.g. ``"latest"``). When ``None``, no ref is set.
         :param uploader_subject: JWT subject of the uploader.
         :param upload_timestamp: ISO 8601 timestamp string.
         :raises VersionConflict: If the version+locale already
@@ -607,7 +609,6 @@ class FilesystemStorage:
                     {
                         "upload_timestamp": (upload_timestamp or ""),
                         "uploader_subject": (uploader_subject or ""),
-                        "latest": latest,
                         "locale": locale,
                     },
                 )
@@ -617,15 +618,14 @@ class FilesystemStorage:
                 fcntl.flock(lock_file, fcntl.LOCK_UN)
 
         _log.info(
-            "Version installed: %s/%s/%s/%s (latest=%s)",
+            "Version installed: %s/%s/%s/%s",
             namespace,
             project,
             version,
             locale,
-            latest,
         )
-        if latest:
-            self.set_latest(namespace, project, version)
+        if ref is not None:
+            self.set_ref(namespace, project, ref, version)
 
     @staticmethod
     def _atomic_move(src: Path, dst: Path) -> None:
@@ -654,10 +654,8 @@ class FilesystemStorage:
     ) -> None:
         """Delete a specific version+locale artifact directory.
 
-        If the deleted version was pointed to by the ``latest``
-        symlink, the symlink is updated to point to the most
-        recently uploaded remaining version, or removed if no
-        versions remain.
+        Refs pointing to the deleted version are preserved but
+        will raise :exc:`VersionNotFound` when resolved.
 
         :param namespace: Namespace name.
         :param project: Project name.
@@ -677,63 +675,8 @@ class FilesystemStorage:
             for d in version_dir.iterdir()
             if d.is_dir() and not d.name.startswith(".")
         ]
-        version_deleted = not remaining_locales
-        if version_deleted:
+        if not remaining_locales:
             shutil.rmtree(version_dir, ignore_errors=True)
-            # Only update the latest symlink when the entire
-            # version was removed and it was the current latest.
-            # Skipping this check when no version was deleted
-            # avoids an unnecessary filesystem read.
-            current_latest = self.get_latest(namespace, project)
-            if current_latest == version:
-                self._update_latest_after_delete(namespace, project)
-
-    def _update_latest_after_delete(self, namespace: str, project: str) -> None:
-        """Update or remove the latest symlink after a delete.
-
-        Picks the version with the most recent upload_timestamp
-        from metadata.toml. If no versions remain, removes the
-        symlink.
-
-        :param namespace: Namespace name.
-        :param project: Project name.
-        """
-        versions = self.list_versions(namespace, project)
-        if not versions:
-            link = self._project_dir(namespace, project) / "latest"
-            try:
-                link.unlink()
-            except FileNotFoundError:
-                pass
-            return
-
-        best_version: str | None = None
-        best_ts = ""
-        for ver in versions:
-            locales = self.list_locales(namespace, project, ver)
-            if not locales:
-                continue
-            meta_path = (
-                self._locale_path(namespace, project, ver, locales[0]) / "metadata.toml"
-            )
-            try:
-                with open(meta_path, "rb") as fh:
-                    meta = tomllib.load(fh)
-                ts = str(meta.get("upload_timestamp", ""))
-            except Exception:
-                ts = ""
-            if best_version is None or ts > best_ts:
-                best_version = ver
-                best_ts = ts
-
-        if best_version:
-            self.set_latest(namespace, project, best_version)
-        else:
-            link = self._project_dir(namespace, project) / "latest"
-            try:
-                link.unlink()
-            except FileNotFoundError:
-                pass
 
     def list_versions(self, namespace: str, project: str) -> list[str]:
         """Return a sorted list of version names for a project.
@@ -768,18 +711,102 @@ class FilesystemStorage:
             if d.is_dir() and not d.name.startswith(".")
         )
 
-    def set_latest(self, namespace: str, project: str, version: str) -> None:
-        """Atomically update the latest symlink to *version*.
+    def set_ref(
+        self,
+        namespace: str,
+        project: str,
+        ref_name: str,
+        version: str,
+    ) -> None:
+        """Atomically create or update a ref pointing to *version*.
+
+        The ref is stored as a symlink inside the project's
+        ``refs/`` directory, pointing to
+        ``../versions/{version}``.
 
         :param namespace: Namespace name.
         :param project: Project name.
-        :param version: Version string to set as latest.
+        :param ref_name: Ref name (e.g. ``"latest"``).
+        :param version: Version string the ref should point to.
         """
-        proj_dir = self._project_dir(namespace, project)
-        tmp_name = f".latest_{os.getpid()}_{uuid.uuid4().hex}"
-        tmp_link = proj_dir / tmp_name
-        os.symlink(version, tmp_link)
-        os.replace(tmp_link, proj_dir / "latest")
+        refs_dir = self._refs_dir(namespace, project)
+        refs_dir.mkdir(parents=True, exist_ok=True)
+        tmp_name = f".ref_{os.getpid()}_{uuid.uuid4().hex}"
+        tmp_link = refs_dir / tmp_name
+        os.symlink(f"../versions/{version}", tmp_link)
+        os.replace(tmp_link, refs_dir / ref_name)
+        _log.info(
+            "Ref set: %s/%s %s -> %s",
+            namespace,
+            project,
+            ref_name,
+            version,
+        )
+
+    def get_ref(
+        self,
+        namespace: str,
+        project: str,
+        ref_name: str,
+    ) -> str:
+        """Return the version pointed to by a named ref.
+
+        :param namespace: Namespace name.
+        :param project: Project name.
+        :param ref_name: Ref name to look up.
+        :returns: Version string.
+        :raises RefNotFound: If the ref does not exist.
+        """
+        link = self._refs_dir(namespace, project) / ref_name
+        if not link.is_symlink():
+            raise RefNotFound(ref_name)
+        target = os.readlink(link)
+        return Path(target).name
+
+    def list_refs(
+        self,
+        namespace: str,
+        project: str,
+    ) -> dict[str, str]:
+        """Return all refs and their target versions.
+
+        :param namespace: Namespace name.
+        :param project: Project name.
+        :returns: Mapping of ref name to version string.
+        """
+        refs_dir = self._refs_dir(namespace, project)
+        if not refs_dir.exists():
+            return {}
+        result: dict[str, str] = {}
+        for entry in refs_dir.iterdir():
+            if entry.is_symlink() and not entry.name.startswith("."):
+                target = os.readlink(entry)
+                result[entry.name] = Path(target).name
+        return result
+
+    def delete_ref(
+        self,
+        namespace: str,
+        project: str,
+        ref_name: str,
+    ) -> None:
+        """Delete a named ref.
+
+        :param namespace: Namespace name.
+        :param project: Project name.
+        :param ref_name: Ref name to delete.
+        :raises RefNotFound: If the ref does not exist.
+        """
+        link = self._refs_dir(namespace, project) / ref_name
+        if not link.is_symlink():
+            raise RefNotFound(ref_name)
+        link.unlink()
+        _log.info(
+            "Ref deleted: %s/%s %s",
+            namespace,
+            project,
+            ref_name,
+        )
 
     def resolve_version(
         self,
@@ -799,7 +826,7 @@ class FilesystemStorage:
 
         :param namespace: Namespace name.
         :param project: Project name.
-        :param version_or_alias: Version string or ``"latest"``.
+        :param version_or_alias: Version string or ref name.
         :param locale: Requested locale code.
         :returns: Tuple of
             ``(resolved_version, resolved_locale)``.
@@ -807,16 +834,10 @@ class FilesystemStorage:
             resolved.
         :raises LocaleNotFound: If no locale is available.
         """
-        if version_or_alias == "latest":
-            link = self._project_dir(namespace, project) / "latest"
-            if not link.is_symlink():
-                _log.warning(
-                    "Version not found: %s/%s latest (symlink not set)",
-                    namespace,
-                    project,
-                )
-                raise VersionNotFound("latest symlink is not set")
-            version = os.readlink(link)
+        ref_link = self._refs_dir(namespace, project) / version_or_alias
+        if ref_link.is_symlink():
+            target = os.readlink(ref_link)
+            version = Path(target).name
         else:
             version = version_or_alias
 

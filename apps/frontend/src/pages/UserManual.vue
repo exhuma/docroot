@@ -229,7 +229,7 @@ curl -X POST \
   -F "file=@docs.zip" \
   -F "version=1.0.0" \
   -F "locale=en" \
-  -F "latest=true"`,
+  -F "ref=latest"`,
 )
 
 const aclExample = computed(

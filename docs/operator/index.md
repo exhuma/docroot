@@ -398,7 +398,8 @@ After this call the caller becomes the new creator.
               <locale>/
                 index.html
                 …
-          latest -> <version>   (symlink)
+          refs/
+            <refname> -> ../versions/<version>  (symlink)
 ```
 
 ---

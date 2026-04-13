@@ -62,10 +62,45 @@ projects/myproject/upload" \
   -F "file=@docs.zip" \
   -F "version=1.0.0" \
   -F "locale=en" \
-  -F "latest=true"
+  -F "ref=latest"
 ```
 
 The ZIP must contain `index.html` at the archive root.
+
+The `ref` field is optional.  Omit it to upload the version
+without attaching any ref.
+
+---
+
+## Managing Refs
+
+Refs are named pointers to versions (like git tags or Docker
+tags).  `latest` is conventional but has no special meaning.
+
+```bash
+# Create or update a ref
+curl -X PUT \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"version": "1.0.0"}' \
+  https://docroot.example.com/api/namespaces/myns/\
+projects/myproject/refs/latest
+
+# List all refs for a project
+curl -H "Authorization: Bearer $TOKEN" \
+  https://docroot.example.com/api/namespaces/myns/\
+projects/myproject/refs
+
+# Delete a ref (the version is not affected)
+curl -X DELETE \
+  -H "Authorization: Bearer $TOKEN" \
+  https://docroot.example.com/api/namespaces/myns/\
+projects/myproject/refs/latest
+```
+
+Deleting a version does **not** remove refs that point to it.
+The ref is kept; resolving it returns a 404 until the ref is
+updated or deleted.
 
 ---
 
@@ -116,4 +151,7 @@ when the backend is running.
 | `GET` | `/api/namespaces/{ns}/projects/{p}/versions` | List versions |
 | `POST` | `/api/namespaces/{ns}/projects/{p}/upload` | Upload version |
 | `GET` | `/api/namespaces/{ns}/projects/{p}/resolve/{v}/{l}` | Resolve |
+| `GET` | `/api/namespaces/{ns}/projects/{p}/refs` | List refs |
+| `PUT` | `/api/namespaces/{ns}/projects/{p}/refs/{ref}` | Create/update ref |
+| `DELETE` | `/api/namespaces/{ns}/projects/{p}/refs/{ref}` | Delete ref |
 | `GET` | `/api/oidc-config` | OIDC public client config |

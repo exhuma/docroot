@@ -153,3 +153,4 @@ deploy/dev/.env
 
 # Sphinx build output
 docs/_build/
+apps/backend/deploy

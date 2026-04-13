@@ -26,7 +26,7 @@ async def install_upload(
     project: str,
     version: str,
     locale: str,
-    latest: bool,
+    ref: str | None,
     uploader_subject: str,
     upload_timestamp: str | None,
     storage: FilesystemStorage,
@@ -44,7 +44,7 @@ async def install_upload(
     :param project: Target project name.
     :param version: Target version string.
     :param locale: Target locale code.
-    :param latest: Whether to update the latest symlink.
+    :param ref: Optional ref name to assign after install.
     :param uploader_subject: JWT subject of the uploader.
     :param upload_timestamp: ISO 8601 timestamp; defaults to now.
     :param storage: Storage instance.
@@ -100,7 +100,7 @@ async def install_upload(
                 version,
                 locale,
                 extract_dir,
-                latest,
+                ref,
                 uploader_subject,
                 upload_timestamp,
             )

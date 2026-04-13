@@ -79,7 +79,7 @@ and is unreachable by external clients.
 ## Prohibited Architectural Drift
 
 - No direct filesystem writes in API handlers.
-- No bypass of resolver for `latest` and locale fallbacks.
+- No bypass of resolver for ref aliases and locale fallbacks.
 - No database, ORM, queue, or background-worker introduction in v1.
 - No upstream/downstream split assumptions in repository design.
 - No static documentation served by nginx without passing

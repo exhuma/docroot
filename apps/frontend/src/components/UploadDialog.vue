@@ -11,7 +11,14 @@
           :label="t('locale')"
           variant="outlined"
         />
-        <v-checkbox v-model="isLatest" :label="t('setLatest')" />
+        <v-text-field
+          v-model="refName"
+          class="mt-2"
+          clearable
+          hint="Leave blank to upload without assigning a ref"
+          :label="t('refLabel')"
+          variant="outlined"
+        />
         <v-alert v-if="errorMsg" class="mt-2" type="error">
           {{ errorMsg }}
         </v-alert>
@@ -59,7 +66,7 @@ const { t } = useI18n()
 const file = ref<File | null>(null)
 const versionName = ref('')
 const localeName = ref('en')
-const isLatest = ref(true)
+const refName = ref('latest')
 const loading = ref(false)
 const errorMsg = ref<string | null>(null)
 const successMsg = ref<string | null>(null)
@@ -75,7 +82,9 @@ async function onSubmit() {
     form.append('file', f)
     form.append('version', versionName.value)
     form.append('locale', localeName.value)
-    form.append('latest', String(isLatest.value))
+    if (refName.value) {
+      form.append('ref', refName.value)
+    }
     await api.uploadVersion(props.namespace, props.project, form, props.token)
     successMsg.value = t('uploadSuccess')
     emit('uploaded')

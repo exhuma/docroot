@@ -15,6 +15,7 @@ from app.schemas.namespace import (
     NamespaceOut,
 )
 from app.schemas.project import ProjectIn, ProjectOut
+from app.schemas.refs import RefIn, RefOut
 from app.schemas.version import ResolveOut, VersionOut
 
 __all__ = [
@@ -28,6 +29,8 @@ __all__ = [
     "NamespaceUsageOut",
     "ProjectIn",
     "ProjectOut",
+    "RefIn",
+    "RefOut",
     "ResolveOut",
     "VersionOut",
 ]
