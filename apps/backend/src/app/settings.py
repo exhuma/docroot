@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     :param keycloak_client_denylist: List of Keycloak client IDs
         whose roles are excluded.  Applied only when
         *keycloak_client_allowlist* is empty.
+    :param disk_usage_low_space_threshold_gb: Minimum free disk
+        space in GB below which a mount group is flagged as low.
+        Defaults to ``1.0`` (1 GB).
     """
 
     model_config = SettingsConfigDict(
@@ -64,6 +67,7 @@ class Settings(BaseSettings):
     oauth_verify_ssl: bool = Field(default=True)
     keycloak_client_allowlist: list[str] = Field(default_factory=list)
     keycloak_client_denylist: list[str] = Field(default_factory=list)
+    disk_usage_low_space_threshold_gb: float = Field(default=1.0)
 
 
 @lru_cache(maxsize=1)

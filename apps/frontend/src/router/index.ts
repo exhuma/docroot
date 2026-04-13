@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import DiskUsagePage from '@/pages/DiskUsagePage.vue'
 import DocsPage from '@/pages/DocsPage.vue'
 import NamespaceList from '@/pages/NamespaceList.vue'
 import OidcCallback from '@/pages/OidcCallback.vue'
@@ -13,6 +14,10 @@ const router = createRouter({
     {
       path: '/',
       component: NamespaceList,
+    },
+    {
+      path: '/disk-usage',
+      component: DiskUsagePage,
     },
     {
       path: '/oidc-callback',
