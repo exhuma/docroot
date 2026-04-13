@@ -44,7 +44,7 @@
             hide-details
             :items="item.locales"
             :label="t('selectLocale')"
-            style="min-width: 120px"
+            style="width: 120px"
             variant="solo"
           />
           <v-btn
