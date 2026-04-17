@@ -51,7 +51,7 @@ def _extract_namespace(original_uri: str) -> str:
         return ""
     if not parsed_path:
         return ""
-    if "\x00" in parsed_path:
+    if "\x00" in parsed_path or "\\" in parsed_path or "\uff0e" in parsed_path:
         return ""
     segments = [segment for segment in parsed_path.split("/") if segment]
     if not segments or any(segment in {".", ".."} for segment in segments):
