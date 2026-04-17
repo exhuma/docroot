@@ -19,10 +19,12 @@ from fastapi.responses import Response
 from app.acl import AclCache
 from app.auth import AuthContext, get_optional_auth
 from app.dependencies import get_acl, get_storage, require_read
+from app.logging import get_logger
 from app.storage import FilesystemStorage
 
 router = APIRouter(tags=["auth"])
 _URL_DECODE_LIMIT = 5
+_log = get_logger(__name__)
 
 
 def _extract_namespace(original_uri: str) -> str:
@@ -45,6 +47,7 @@ def _extract_namespace(original_uri: str) -> str:
             break
         parsed_path = decoded
     else:
+        _log.warning("Rejected URI: decode depth exceeded (%d)", _URL_DECODE_LIMIT)
         return ""
     if not parsed_path:
         return ""
