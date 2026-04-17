@@ -127,6 +127,14 @@ const isDev = import.meta.env.DEV
 const dragging = ref(false)
 // v-card is a component; access the root DOM element via .$el.
 const panelEl = ref<{ $el: HTMLElement } | null>(null)
+const defaultTitle = document.title
+
+/**
+ * Update the browser title with project name and version only.
+ */
+function updatePageTitle(version: string) {
+  document.title = `${project} ${version}`
+}
 
 /** Pixel coordinates used while dragging. */
 type PanelPos = {
@@ -273,6 +281,7 @@ async function resolve() {
       token.value,
     )
     fallbackUsed.value = resolved.value.fallback_used
+    updatePageTitle(resolved.value.version)
   } catch (error_) {
     error.value = (error_ as Error).message
   }
@@ -289,6 +298,7 @@ function onLocaleChange(loc: string) {
 }
 
 onMounted(async () => {
+  updatePageTitle(selectedVersion.value)
   window.addEventListener('resize', clampPanel)
   try {
     versions.value = await api.listVersions(namespace, project, token.value)
@@ -315,6 +325,7 @@ watch(
 onUnmounted(() => {
   window.removeEventListener('resize', clampPanel)
   stopDrag()
+  document.title = defaultTitle
 })
 </script>
 
