@@ -23,7 +23,10 @@ from app.logging import get_logger
 from app.storage import FilesystemStorage
 
 router = APIRouter(tags=["auth"])
+# Legitimate doc URLs in this app need at most one decode pass; keep a
+# small cap to avoid pathological nested-encoding payloads.
 _URL_DECODE_LIMIT = 5
+_FULLWIDTH_DOT = "\uff0e"
 _log = get_logger(__name__)
 
 
@@ -51,7 +54,7 @@ def _extract_namespace(original_uri: str) -> str:
         return ""
     if not parsed_path:
         return ""
-    if "\x00" in parsed_path or "\\" in parsed_path or "\uff0e" in parsed_path:
+    if "\x00" in parsed_path or "\\" in parsed_path or _FULLWIDTH_DOT in parsed_path:
         return ""
     segments = [segment for segment in parsed_path.split("/") if segment]
     if not segments or any(segment in {".", ".."} for segment in segments):
