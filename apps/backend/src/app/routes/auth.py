@@ -22,7 +22,7 @@ from app.dependencies import get_acl, get_storage, require_read
 from app.storage import FilesystemStorage
 
 router = APIRouter(tags=["auth"])
-_MAX_URL_DECODE_PASSES = 10
+_URL_DECODE_LIMIT = 5
 
 
 def _extract_namespace(original_uri: str) -> str:
@@ -39,11 +39,13 @@ def _extract_namespace(original_uri: str) -> str:
         cannot be parsed.
     """
     parsed_path = urlsplit(original_uri).path
-    for _ in range(_MAX_URL_DECODE_PASSES):
+    for _ in range(_URL_DECODE_LIMIT):
         decoded = unquote(parsed_path)
         if decoded == parsed_path:
             break
         parsed_path = decoded
+    else:
+        return ""
     if not parsed_path:
         return ""
     if "\x00" in parsed_path:
