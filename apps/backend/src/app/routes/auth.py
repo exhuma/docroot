@@ -11,6 +11,7 @@ the caller's read permission against the namespace ACL.
 """
 
 from typing import Annotated
+from urllib.parse import unquote, urlsplit
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import Response
@@ -26,18 +27,27 @@ router = APIRouter(tags=["auth"])
 def _extract_namespace(original_uri: str) -> str:
     """Extract the namespace segment from a static-doc URI.
 
-    The static documentation route has the form::
+    Accepted static documentation routes have one of these forms::
 
         /{namespace}/{project}/{version}/{locale}/...
+        /{namespace}/{project}/ref/{ref}/{locale}/...
+        /{namespace}/{project}/docs/{version}/{locale}
 
     :param original_uri: Value of the ``X-Original-URI`` header.
     :returns: Namespace string, or empty string when the URI
         cannot be parsed.
     """
-    stripped = original_uri.lstrip("/")
-    if not stripped:
+    parsed_path = unquote(urlsplit(original_uri).path)
+    if not parsed_path:
         return ""
-    return stripped.split("/")[0]
+    segments = [segment for segment in parsed_path.split("/") if segment]
+    if not segments or any(segment in {".", ".."} for segment in segments):
+        return ""
+    if len(segments) < 4:
+        return ""
+    if segments[2] == "ref" and len(segments) < 5:
+        return ""
+    return segments[0]
 
 
 @router.get("/api/auth")
