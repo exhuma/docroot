@@ -37,7 +37,12 @@ def _extract_namespace(original_uri: str) -> str:
     :returns: Namespace string, or empty string when the URI
         cannot be parsed.
     """
-    parsed_path = unquote(urlsplit(original_uri).path)
+    parsed_path = urlsplit(original_uri).path
+    for _ in range(3):
+        decoded = unquote(parsed_path)
+        if decoded == parsed_path:
+            break
+        parsed_path = decoded
     if not parsed_path:
         return ""
     segments = [segment for segment in parsed_path.split("/") if segment]
