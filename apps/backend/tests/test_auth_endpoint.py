@@ -128,6 +128,110 @@ def test_spa_docs_path_extracts_correct_namespace(
     assert response.status_code == 200
 
 
+def test_ref_docs_path_extracts_correct_namespace(
+    tmp_path: Path,
+) -> None:
+    """Ensure auth check works for ref-tagged documentation URLs."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("myns", public_read=True)
+    ns_dir = storage.namespace_dir("myns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = true\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={"X-Original-URI": "/myns/proj/ref/latest/en/"},
+    )
+    assert response.status_code == 200
+
+
+def test_path_traversal_uri_returns_400(tmp_path: Path) -> None:
+    """Ensure traversal-like URIs are rejected by auth check."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("myns", public_read=True)
+    ns_dir = storage.namespace_dir("myns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = true\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={"X-Original-URI": "/myns/proj/ref/latest/en/../index.html"},
+    )
+    assert response.status_code == 400
+
+
+def test_encoded_path_traversal_uri_returns_400(tmp_path: Path) -> None:
+    """Ensure encoded traversal URIs are rejected by auth check."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("myns", public_read=True)
+    ns_dir = storage.namespace_dir("myns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = true\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={"X-Original-URI": "/myns/proj/ref/latest/en/%2e%2e/index.html"},
+    )
+    assert response.status_code == 400
+
+
+def test_double_encoded_path_traversal_uri_returns_400(tmp_path: Path) -> None:
+    """Ensure double-encoded traversal URIs are rejected by auth check."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("myns", public_read=True)
+    ns_dir = storage.namespace_dir("myns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = true\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={"X-Original-URI": "/myns/proj/ref/latest/en/%252e%252e/index.html"},
+    )
+    assert response.status_code == 400
+
+
+def test_null_byte_uri_returns_400(tmp_path: Path) -> None:
+    """Ensure null-byte paths are rejected by auth check."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("myns", public_read=True)
+    ns_dir = storage.namespace_dir("myns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = true\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={"X-Original-URI": "/myns/proj/ref/latest/en/%00index.html"},
+    )
+    assert response.status_code == 400
+
+
+def test_encoded_backslash_uri_returns_400(tmp_path: Path) -> None:
+    """Ensure encoded backslashes are rejected by auth check."""
+    client, storage = _make_client(tmp_path)
+    storage.create_namespace("myns", public_read=True)
+    ns_dir = storage.namespace_dir("myns")
+    _write_ns_toml(
+        ns_dir,
+        "[access]\npublic_read = true\n",
+    )
+
+    response = client.get(
+        "/api/auth",
+        headers={"X-Original-URI": "/myns/proj/ref/latest/en/%5cindex.html"},
+    )
+    assert response.status_code == 400
+
+
 def test_unknown_namespace_returns_404(tmp_path: Path) -> None:
     """Ensure a request for an unknown namespace returns 404."""
     client, _ = _make_client(tmp_path)
